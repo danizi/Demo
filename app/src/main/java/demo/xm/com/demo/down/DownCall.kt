@@ -1,6 +1,7 @@
 package demo.xm.com.demo.down
 
 import android.os.Environment
+import android.util.Log
 import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -99,7 +100,7 @@ class DownCall(requst: DownRequst?) {
                     if (Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED) {
                         return
                     }
-                    val fileName = /*downRequst?.url?.split("/")*/"123.apk"
+                    val fileName = downRequst?.url?.split("/")!![downRequst?.url?.split("/")!!.size-1]
                     val pathName = Environment.getExternalStorageDirectory().absolutePath + File.separator + fileName
                     val file = File(pathName)
                     file.createNewFile()
@@ -114,7 +115,9 @@ class DownCall(requst: DownRequst?) {
                             break
                         bos.write(b)//数据写入文件
                         state = DownState.PROCESSING //下载状态
-                        process = process?.plus(lenth)?.div(contentLength!!)//下载进度
+                        var d :Float= ((lenth.toFloat()  / contentLength!!.toFloat()).toFloat())
+                        Log.e("xm","当前进度:"+d)
+                        process = process!! +(lenth/ contentLength!!)
                         callback?.onProgress(call = instance)
                     } while (true)
 
