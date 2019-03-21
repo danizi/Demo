@@ -1,6 +1,5 @@
 package demo.xm.com.demo.down2
 
-import android.app.Application
 import android.content.Context
 import android.os.Environment
 import android.text.TextUtils
@@ -10,6 +9,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * 下载调度器，管理下载任务，提供了下载监听，暂停，下载，添加任务，取消任务等职责
+ * 生产者-消费者 并发队列 https://blog.csdn.net/qq_26676207/article/details/80844665
  */
 class DownDispatcher(b: DownDispatcherBuilder) : OnDownDispatcher {
     /* 调度器 */
@@ -90,6 +90,8 @@ class DownDispatcher(b: DownDispatcherBuilder) : OnDownDispatcher {
         var maxMultipleThreadNum = 0                  // 最大同时“下载器”分配的线程数量
         var pool: ThreadPoolExecutor? = null          // 调度器线程池
         var multiplePool: ThreadPoolExecutor? = null  // 下载器线程池
+
+
         var connectTimeout = 0                        // 设置连接超时时间
         var readTimeout = 0                           // 设置读取超时时间
 
