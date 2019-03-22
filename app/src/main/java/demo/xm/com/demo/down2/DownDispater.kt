@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit
 
 /**
  * 下载调度器，管理下载任务，提供了下载监听，暂停，下载，添加任务，取消任务等职责
- * 生产者-消费者 并发队列 https://blog.csdn.net/qq_26676207/article/details/80844665
+ * 生产者-消费者 并发队列 https://blog.csdn.net/qq_26676207/article/details/80844665 dfgfggsdfgs
  */
 class DownDispatcher(b: DownDispatcherBuilder) : OnDownDispatcher {
     /* 调度器 */

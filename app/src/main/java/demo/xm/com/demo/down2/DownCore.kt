@@ -71,6 +71,7 @@ class DownCore(private var builder: DownCore.Builder?) : Runnable {
         //打印下载总耗时
         val endTime = System.currentTimeMillis()
         BKLog.d(TAG, CommonUtil.getFileName(builder?.downTask?.url) + " - " + tempFileName + "下载完成，总耗时：" + (endTime - startTime) / 1000)
+
     }
 
     private fun addRangeRequestProperty(urlConn: HttpURLConnection?) {
