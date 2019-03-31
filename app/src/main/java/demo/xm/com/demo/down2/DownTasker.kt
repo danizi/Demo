@@ -1,11 +1,16 @@
 package demo.xm.com.demo.down2
 
+import android.content.Context
+import android.text.TextUtils
 import demo.xm.com.demo.down2.log.BKLog
 import demo.xm.com.demo.down2.utils.CommonUtil
 import demo.xm.com.demo.down2.utils.FileUtil
+import demo.xm.com.demo.down2.utils.FileUtil.getSizeUnit
+import demo.xm.com.demo.down2.utils.FileUtil.getTotalSpace
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.ThreadPoolExecutor
 
 /**
  *  多线程下载器
@@ -15,189 +20,214 @@ import java.net.URL
  *  https://blog.csdn.net/u010105970/article/details/51225850
  *  文件合并 https://www.cnblogs.com/lojun/articles/6111812.html
  */
-class DownTasker(private val builder: DownDispatcher.DownDispatcherBuilder?, private var downTask: DownTask) : Thread(), OnDownListener, OnDownTasker {
-
-    private val TAG = this::class.java.simpleName
-    private var downCores: ArrayList<DownCore>? = null
-
-    init {
-        downCores = ArrayList()
+class DownTasker {
+    companion object {
+        const val tag = "DownTasker"
     }
 
-    @Synchronized
-    override fun run() {
-        /*主要获取下载“文件总大小”和 每个分段线程下载的大小*/
-        val (maxMultipleThread, urlConn: HttpURLConnection?) = initConn()
-        //下载的大小
-        //多线程每段下载的大小
-        val total = urlConn?.contentLength
-        val segmentSize = total!! / maxMultipleThread
-        BKLog.d(downTask.url + "总大小：$total B,分成$maxMultipleThread 段下载，每段文件大小$segmentSize B")
+    private var downManager: DownManager? = null
+    private var downConfig: DownConfig? = null
+    var downTask: DownTask? = null
+    var runnable: Runnable? = null
 
-        /*判断可用空间大小*/
-        if (total > FileUtil.getUsableSpace(builder?.ctx)) {
-            BKLog.e(TAG, "空间不足")
-            return
+    private constructor() : super()
+
+    constructor(builder: Builder) {
+        downManager = builder.downManager
+        downTask = builder.downTask
+        downConfig = builder.downConfig
+        runnable = DownTaskerRunnable(this, downManager, downTask, downConfig)
+    }
+
+    fun enqueue() {
+        /*加入下载队列*/
+        downManager?.dispatcher?.enqueue(this)
+    }
+
+    fun pause() {
+        /*暂停队列*/
+    }
+
+    fun cancel() {
+        /*取消下载任务，并将缓存删除*/
+    }
+
+    /**
+     * 分段下载Runnable接口
+     */
+    private class DownTaskerRunnable(val downTasker: DownTasker, val downManager: DownManager?, val downTask: DownTask?, downConfig: DownConfig?) : Runnable {
+
+        private var url: String = ""
+        private var ctx: Context? = null
+        private var path: String? = ""
+        private var dir: String? = ""
+        private var threadNamePrefix: String? = ""
+        private var tempSuffix: String? = ""
+        private var buffer: ByteArray? = null
+        private var multiplePool: ThreadPoolExecutor? = null
+        private var maxMultipleThreadNum: Int = 0
+        private var connectTimeout: Int = 0
+        private var readTimeout: Int = 0
+
+        init {
+            this.url = downTask?.url!!
+            this.ctx = downConfig?.ctx
+            this.path = downConfig?.path
+            this.dir = downConfig?.dir
+            this.threadNamePrefix = downConfig?.threadNamePrefix
+            this.tempSuffix = downConfig?.tempSuffix
+            this.buffer = downConfig?.buffer
+            this.multiplePool = downConfig?.multiplePool
+            this.maxMultipleThreadNum = downConfig?.maxMultipleThreadNum!!
+            this.connectTimeout = downConfig.connectTimeout
+            this.readTimeout = downConfig.readTimeout
         }
-        BKLog.d("下载内容大小:" + FileUtil.getSizeUnit(total.toLong()) + " 可用空间：" + FileUtil.getSizeUnit(FileUtil.getUsableSpace(builder?.ctx)) + " sd卡总空间：" + FileUtil.getSizeUnit(FileUtil.getTotalSpace()))
 
-        /*创建一个占位文件，即下载的文件*/
-        val file = FileUtil.createNewFile(builder?.path, builder?.dir, CommonUtil.getFileName(downTask.url))
+        override fun run() {
+            //主要获取下载“文件总大小”和 每个分段线程下载的大小
+            val url = URL(url)
+            val conn: HttpURLConnection? = url.openConnection() as HttpURLConnection //建立连接
+            conn?.requestMethod = "GET"                       //请求方法
+            conn?.doInput = true                              //打开获取输入流权限
+            conn?.connectTimeout = connectTimeout             //连接超时时间
+            conn?.readTimeout = readTimeout                   //读取超时时间
+            val total = conn?.contentLength                   //下载的大小
 
-        /*创建maxMultipleThread个Runnable实现下载，并添加到线程池中*/
-        addPool(maxMultipleThread, segmentSize)
+            //判断可用空间大小
+            if (total!! > FileUtil.getUsableSpace(ctx)) {
+                BKLog.e(tag, "空间不足，下载内容大小:" + getSizeUnit(total.toLong()) + " 可用空间：" + getSizeUnit(FileUtil.getUsableSpace(ctx)) + " sd卡总空间：" + getSizeUnit(getTotalSpace()))
+                downManager?.downObserverable?.notifyObserverError(downTasker, DownErrorType.NO_SPACE) //下载出错通知观察者
+                return
+            }
+            BKLog.d(tag, "下载内容大小:" + getSizeUnit(total.toLong()) + " 可用空间：" + getSizeUnit(FileUtil.getUsableSpace(ctx)) + " sd卡总空间：" + getSizeUnit(getTotalSpace()))
 
-        /*获取下载的进度*/
-        getProcess(file, total)
+            //执行多片段线程执行下载
+            val segmentSize = total / maxMultipleThreadNum   //多线程每段下载的大小
+            BKLog.d(tag, url.toString() + "总大小：$total B,分成$maxMultipleThreadNum 段下载，每段文件大小$segmentSize B")
+            val file = if (TextUtils.isEmpty(downTask?.fileName) && TextUtils.isEmpty(downTask?.fileHouzui)) {
+                val fileName = CommonUtil.getFileName(url.toString())
+                BKLog.d(tag, "根据下载地址获取名称，下载文件名称:$fileName")
+                FileUtil.createNewFile(path, dir, fileName)
+            } else {
+                val fileName = downTask?.fileName + File.separator + downTask?.fileHouzui
+                BKLog.d(tag, "根据用户配置获取名称，下载文件名称:$fileName")
+                FileUtil.createNewFile(path, dir, fileName)
+            }
+            val downCores = createMultipleThread(segmentSize)//创建下载线程
+            if (downCores?.isNotEmpty()!!) {
+                addPool(downCores)  // 线程加到线程池中执行
+                getProcess(downCores, file, total) //获取下载的进度
 
-        /*合并文件，合并成功，删除临时文件 PS:合成过程中需要对临时文件需要进行排序*/
-        val inFile = File(file.absolutePath + "_Temp")
-        FileUtil.mergeFiles(file, inFile)
-        FileUtil.del(inFile)
-    }
+                //合并文件，合并成功，删除临时文件 PS:合成过程中需要对临时文件需要进行排序
+                val inFile = File(file.absolutePath + "_Temp")
+                FileUtil.mergeFiles(file, inFile)
+                FileUtil.del(inFile)
+            } else {
+                BKLog.d(tag, "downCores is null")
+            }
 
-    private fun getProcess(file: File, total: Int) {
-        var complete = false
-        var process: Long = 0
-        while (!complete) {
-            complete = true
+            downManager?.downObserverable?.notifyObserverComplete(downTasker) //下载完成通知观察者
+            downManager?.dispatcher?.finish(downTasker)    //任务下载完成通知分发器
+        }
 
-            //遍历每个分段下载的状态，如果全部都下载成功
-            for (downCore in downCores?.iterator()!!) {
-                if (downCore.downState == false) {
-                    complete = false
+        private fun getProcess(downCores: ArrayList<DownCore>, file: File, total: Int) {
+            /*获取下载进度*/
+            var complete = false
+            var process: Long = 0
+            while (!complete) {
+                complete = true
+
+                //遍历每个分段下载的状态，如果全部都下载成功
+                for (downCore in downCores) {
+
+                    if (downCore.downCoreReadable?.downState == false) {
+                        complete = false
+                    }
+
+                    // 获取每个分段线程下载的字节数量
+                    process += downCore.downCoreReadable?.process!!
+                    //BKLog.d(tag, file.absolutePath + "任务，下载进度：" + ((process / total) * 100) + "%")
+                    downManager?.downObserverable?.notifyObserverProcess(downTasker, process, total.toLong(), ((process / total) * 100).toFloat())//下载进度通知观察者
                 }
-
-                // 获取每个分段线程下载的字节数量
-                process += downCore.process
-                BKLog.d(TAG, file.absolutePath + "任务，下载进度：" + ((process / total) * 100) + "%")
             }
         }
-        BKLog.d(TAG, file.absolutePath + "任务下载完成")
-        BKLog.d(file.absolutePath + "任务下载完成")
-    }
 
-    private fun addPool(maxMultipleThread: Int, segmentSize: Int) {
-        //将分段任务线程放入到线程池中，进行下载处理
-        val maxMultipleThreadSize = maxMultipleThread - 1
-        for (i in 0..maxMultipleThreadSize) {
+        private fun createMultipleThread(segmentSize: Int): ArrayList<DownCore>? {
+            /*将分段任务线程放入到线程池中，进行下载处理*/
+            val downCores = ArrayList<DownCore>()
+            val maxMultipleThreadSize = maxMultipleThreadNum - 1
+            for (i in 0..maxMultipleThreadSize) {
+                val pair = getDownIndex(i, segmentSize, maxMultipleThreadSize)  //获取分段下载范围 PS:若是最后
 
-            //获取分段下载范围
-            val pair = getDownIndex(i, segmentSize, maxMultipleThreadSize)
-            val startIndex = pair.first
-            val endIndex = pair.second
+                val threadName = threadNamePrefix + i           //构建下载Runnable
+                val downCore = DownCore.Builder().dir(dir)
+                        .segment(i)
+                        .downTask(downTask)
+                        .startIndex(startIndex = pair.first.toLong())
+                        .endIndex(endIndex = pair.second.toLong())
+                        .buffer(buffer)
+                        .threadNamePrefix(threadNamePrefix)
+                        .tempSuffix(tempSuffix)
+                        .build()
 
-            //构建下载Runnable
-            //下载Runnable添加到线程池
-            //Runnable添加到集合中
-            val threadName = builder?.threadNamePrefix + i
-            val downCore = buildDownCore(i, startIndex, endIndex)
-            builder?.multiplePool?.submit(downCore)
-            downCores?.add(downCore)
+                downCores.add(downCore)//线程集合
 
-            BKLog.d(TAG, "*****************************")
-            BKLog.d(TAG, "$threadName 分段任务添加到下载线程池子中....")
-            BKLog.d(TAG, "$threadName startIndex:$startIndex endIndex:$endIndex")
-            BKLog.d(TAG, "")
+                BKLog.d(tag, "*****************************")
+                BKLog.d(tag, "$threadName 分段任务添加到下载线程池子中....")
+                BKLog.d(tag, "$threadName startIndex:${pair.first.toLong()} endIndex:${pair.second.toLong()}")
+                BKLog.d(tag, "")
+            }
+            return downCores
+        }
+
+        private fun getDownIndex(i: Int, segmentSize: Int, maxMultipleThreadSize: Int): Pair<Int, Int> {
+            /*获取下载判断范围*/
+            val startIndex = i * segmentSize
+            var endIndex = ((i + 1) * segmentSize) - 1
+            if (i == maxMultipleThreadSize) {
+                endIndex = -1
+            }
+            return Pair(startIndex, endIndex)
+        }
+
+        private fun addPool(downCores: ArrayList<DownCore>) {
+            /*将分段任务线程放入到线程池中，进行下载处理*/
+            for (downCore in downCores) {
+                multiplePool?.submit(downCore.downCoreReadable)
+            }
         }
     }
 
-    private fun buildDownCore(i: Int, startIndex: Int, endIndex: Int): DownCore {
-        val downCoreBuilder = DownCore.Builder()
-        downCoreBuilder.dir = builder?.dir
-        downCoreBuilder.segment = i
-        downCoreBuilder.downTask = downTask
-        downCoreBuilder.startIndex = startIndex.toLong()
-        downCoreBuilder.endIndex = endIndex.toLong()
-        downCoreBuilder.buffer = builder?.buffer
-        downCoreBuilder.threadNamePrefix = builder?.threadNamePrefix
-        downCoreBuilder.tempSuffix = builder?.tempSuffix
-        return downCoreBuilder.build()
-    }
+    /**
+     * 下载者构建类
+     */
+    class Builder {
+        var downManager: DownManager? = null//下载管理器
+        var downTask: DownTask? = null//下载任务信息
+        var downConfig: DownConfig? = null//下载配置信息
 
-    private fun getDownIndex(i: Int, segmentSize: Int, maxMultipleThreadSize: Int): Pair<Int, Int> {
-        val startIndex = i * segmentSize
-        var endIndex = ((i + 1) * segmentSize) - 1
-        if (i == maxMultipleThreadSize) {
-            endIndex = -1
+        fun setDownManager(downManager: DownManager?): Builder {
+            this.downManager = downManager
+            return this
         }
-        return Pair(startIndex, endIndex)
-    }
 
-    private fun initConn(): Pair<Int, HttpURLConnection?> {
-        val maxMultipleThread = builder?.maxMultipleThreadNum!!
-        val url = URL(downTask.url)
-        val urlConn: HttpURLConnection? = url.openConnection() as HttpURLConnection //建立连接
-        urlConn?.requestMethod = "GET"                       //请求方法
-        urlConn?.doInput = true                              //打开获取输入流权限
-        urlConn?.connectTimeout = builder.connectTimeout
-        urlConn?.readTimeout = builder.readTimeout
-        return Pair(maxMultipleThread, urlConn)
-    }
+        fun setTask(task: DownTask): Builder {
+            this.downTask = task
+            return this
+        }
 
-    override fun onStart(id: String?) {
-        builder?.pool?.execute(this)
-    }
+        fun setConfig(downConfig: DownConfig?): Builder {
+            this.downConfig = downConfig
+            return this
+        }
 
-    override fun onPause(id: String?) {
-        builder?.pool?.remove(this)
-    }
+        fun build(): DownTasker {
+            if (downManager == null) throw NullPointerException("downManager is null")
+            if (downTask == null) throw NullPointerException("downTask is null")
+            if (downConfig == null) throw NullPointerException("downConfig is null")
+            return DownTasker(this)
+        }
 
-    override fun onCancle(id: String?) {
-        builder?.pool?.remove(this)
-    }
-
-    override fun onDelete(id: String?) {
-        builder?.pool?.remove(this)
-    }
-
-    override fun onProcess(downTasker: DownTasker, process: Long) {
 
     }
-
-    override fun onComplete(downTasker: DownTasker) {
-
-    }
-
-    override fun onError(downTasker: DownTasker, typeError: DownTypeError) {
-
-    }
-
-}
-
-/**
- * 对外提供接口
- */
-interface OnDownTasker {
-
-    /*启动下载任务*/
-    fun onStart(id: String?)
-
-    /*暂停下载任务*/
-    fun onPause(id: String?)
-
-    /*取消未下载完成的任务*/
-    fun onCancle(id: String?)
-
-    /*删除已下载任务的缓存*/
-    fun onDelete(id: String?)
-}
-
-/**
- * 下载任务监听
- */
-interface OnDownListener {
-    fun onProcess(downTasker: DownTasker, process: Long)
-    fun onComplete(downTasker: DownTasker)
-    fun onError(downTasker: DownTasker, typeError: DownTypeError)
-}
-
-/**
- * 下载错误类型
- */
-enum class DownTypeError {
-    //文件创建错误
-    //空间不足情况
-    //连接超时情况
-    //...
 }

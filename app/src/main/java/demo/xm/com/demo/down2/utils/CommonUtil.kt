@@ -7,7 +7,6 @@ object CommonUtil {
     private val TAG = this.javaClass.simpleName
 
     fun getFileName(url: String?): String {
-        return "xm.jpg"
         var fileName = "down.xm"
         if (TextUtils.isEmpty(url)) {
             BKLog.e(TAG,"下载地址为null")
