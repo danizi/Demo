@@ -126,7 +126,7 @@ class DownTasker {
                 BKLog.d(tag, "downCores is null")
             }
 
-            downManager?.downObserverable?.notifyObserverComplete(downTasker) //下载完成通知观察者
+            downManager?.downObserverable?.notifyObserverComplete(downTasker,total.toLong()) //下载完成通知观察者
             downManager?.dispatcher?.finish(downTasker)    //任务下载完成通知分发器
         }
 

@@ -92,13 +92,12 @@ class MainActivity : AppCompatActivity(), DownObserver {
         updateDownInfo("onProcess", tasker, process, total, present)
     }
 
-    override fun onComplete(tasker: DownTasker) {
+    override fun onComplete(tasker: DownTasker, total: Long) {
         BKLog.d(tag, "*************************************")
         BKLog.d(tag, "onComplete ${tasker.downTask.toString()}")
         BKLog.d(tag, " ")
-        updateDownInfo("onComplete", tasker)
+        updateDownInfo("onComplete", tasker, -1, total)
     }
-
 
     override fun onError(tasker: DownTasker, typeError: DownErrorType) {
         BKLog.d(tag, "*************************************")
@@ -107,7 +106,6 @@ class MainActivity : AppCompatActivity(), DownObserver {
         updateDownInfo("onError", tasker, -1, -1, -1f, typeError)
     }
 
-    private var t: Long = -1
     private fun updateDownInfo(type: String, tasker: DownTasker, process: Long = -1, total: Long = -1, present: Float = -1f, typeError: DownErrorType = DownErrorType.UNKNOWN) {
         val downInfos = myAdapter?.data!! as ArrayList<DownInfo>
         for (i in 0..(downInfos.size - 1)) {
@@ -115,9 +113,6 @@ class MainActivity : AppCompatActivity(), DownObserver {
             if (downInfo.name == tasker.downTask?.url) {
                 when (type) {
                     "onProcess" -> {
-                        if (t < 0) {
-                            t = total
-                        }
                         downInfo.state = "正在下载中..."
                         downInfo.progress = process.toInt()
                         downInfo.present = present.toFloat()
@@ -126,7 +121,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
 
                     "onComplete" -> {
                         downInfo.state = "下载完成"
-                        downInfo.progress = t.toInt()
+                        downInfo.progress = total.toInt()
                     }
                     "onError" -> {
                         downInfo.state = "下载错误"

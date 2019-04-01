@@ -24,7 +24,7 @@ class DownObserverable {
         for (downObserverable in queue!!) {
             when (type) {
                 0 -> {
-                    downObserverable.onComplete(tasker)
+                    downObserverable.onComplete(tasker, total)
                 }
                 1 -> {
                     if (typeError == null) return
@@ -39,8 +39,8 @@ class DownObserverable {
         }
     }
 
-    fun notifyObserverComplete(tasker: DownTasker) {
-        notifyObserver(0, tasker)
+    fun notifyObserverComplete(tasker: DownTasker, total: Long) {
+        notifyObserver(0, tasker, null, -1,total)
     }
 
     fun notifyObserverError(tasker: DownTasker, typeError: DownErrorType) {
