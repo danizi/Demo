@@ -145,9 +145,12 @@ class DownTasker {
                     }
 
                     // 获取每个分段线程下载的字节数量
-                    process += downCore.downCoreReadable?.process!!
-                    //BKLog.d(tag, file.absolutePath + "任务，下载进度：" + ((process / total) * 100) + "%")
-                    downManager?.downObserverable?.notifyObserverProcess(downTasker, process, total.toLong(), ((process / total) * 100).toFloat())//下载进度通知观察者
+                    if (maxMultipleThreadNum == 1) {
+                        process = downCore.downCoreReadable?.process!!
+                    } else {
+                        process += downCore.downCoreReadable?.process!!
+                    }
+                    downManager?.downObserverable?.notifyObserverProcess(downTasker, process, total.toLong(), ((process * 100 / total)).toFloat())//下载进度通知观察者
                 }
             }
         }
