@@ -1,16 +1,19 @@
 package demo.xm.com.demo.down2
 
 import android.content.Context
+import demo.xm.com.demo.down2.db.DownDao
 
 /**
  * 下载
  */
 class DownManager {
+    var downDao: DownDao? = null
     var dispatcher: DownDispatcher? = null
     var downConfig: DownConfig? = null
     var downObserverable: DownObserverable? = null
 
     constructor(context: Context) {
+        downDao = DownDao(context)
         downConfig = DownConfig.Builder().ctx(context).build()
         dispatcher = DownDispatcher.Builder().build()
         downObserverable = DownObserverable()
@@ -18,6 +21,7 @@ class DownManager {
                 .setDispatcher(dispatcher)
                 .setConfig(downConfig)
                 .setDownObserverable(downObserverable)
+                .setDownDao(downDao)
                 .build()
     }
 
@@ -32,6 +36,7 @@ class DownManager {
         return DownTasker.Builder()
                 .setDownManager(this)
                 .setTask(task)
+                .setDownDao(downDao)
                 .setConfig(downConfig)
                 .build()
     }
@@ -40,6 +45,7 @@ class DownManager {
      * 下载管理建造者
      */
     class Builder {
+        var dao: DownDao? = null
         var dispatcher: DownDispatcher? = null
         var downConfig: DownConfig? = null
         var downObserverable: DownObserverable? = null
@@ -56,6 +62,11 @@ class DownManager {
 
         fun setDownObserverable(downObserverable: DownObserverable?): Builder {
             this.downObserverable = downObserverable
+            return this
+        }
+
+        fun setDownDao(dao: DownDao?): Builder {
+            this.dao = dao
             return this
         }
 

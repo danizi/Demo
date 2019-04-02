@@ -2,6 +2,7 @@ package demo.xm.com.demo.down2.db
 
 import android.content.Context
 import android.database.sqlite.SQLiteOpenHelper
+import android.text.TextUtils
 import demo.xm.com.demo.down2.db.DownDBContract.DownTable.SQL_DELETE
 import demo.xm.com.demo.down2.db.DownDBContract.DownTable.SQL_QUERY_ALL
 import demo.xm.com.demo.down2.db.DownDBContract.DownTable.SQL_QUERY_INSERT
@@ -73,6 +74,31 @@ class DownDao(context: Context?) {
         /*查询所有数据*/
         val downs = ArrayList<DownDBContract.DownInfo>()
         val cursor = helper?.readableDatabase?.rawQuery(SQL_QUERY_ALL, null) ?: return downs
+        while (cursor.moveToNext()) {
+            val down = DownDBContract.DownInfo()
+            BKLog.d("id: ${cursor.getInt(0)} url:${cursor.getString(2)}")
+            down.uuid = cursor.getString(1)
+            down.url = cursor.getString(2)
+            down.name = cursor.getString(3)
+            down.present = cursor.getInt(4)
+            down.progress = cursor.getInt(5)
+            down.total = cursor.getInt(6)
+            down.absolutePath = cursor.getString(7)
+            down.state = "点击恢复下载"
+            downs.add(down)
+        }
+        helper?.writableDatabase?.close()
+        return downs
+    }
+
+    fun query(uuid: String): ArrayList<DownDBContract.DownInfo> {
+        /*查询数据通过uuid*/
+        var downs = ArrayList<DownDBContract.DownInfo>()
+        if (TextUtils.isEmpty(uuid)) return downs
+        downs = ArrayList<DownDBContract.DownInfo>()
+        val cursor = helper?.readableDatabase?.rawQuery(
+                SQL_QUERY_UUID,
+                arrayOf(uuid)) ?: return downs
         while (cursor.moveToNext()) {
             val down = DownDBContract.DownInfo()
             BKLog.d("id: ${cursor.getInt(0)} url:${cursor.getString(2)}")

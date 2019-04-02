@@ -52,7 +52,7 @@ object CommonUtil {
             // 生成一个MD5加密计算摘要
             val md = MessageDigest.getInstance("MD5")
             //对字符串进行加密
-            md.update(plainText?.toByte()!!)
+            md.update(plainText?.toByteArray()!!)
             //获得加密后的数据
             secretBytes = md.digest()
         } catch (e: NoSuchAlgorithmException) {

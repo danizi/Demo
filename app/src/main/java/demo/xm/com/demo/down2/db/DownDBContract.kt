@@ -51,7 +51,7 @@ class DownDBContract {
          *       SELECT * FROM 表名称 查询所有
          */
         const val SQL_QUERY_ALL = "SELECT * FROM $TABLE_NAME"
-        const val SQL_QUERY_UUID = "SELECT * FROM $TABLE_NAME $COLUMN_UUID=?"
+        const val SQL_QUERY_UUID = "SELECT * FROM $TABLE_NAME WHERE $COLUMN_UUID = ?"
 
 
         /* 更新

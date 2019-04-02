@@ -1,6 +1,7 @@
 package demo.xm.com.demo.down2
 
 import android.os.Environment
+import demo.xm.com.demo.down2.db.DownDao
 import demo.xm.com.demo.down2.log.BKLog
 import demo.xm.com.demo.down2.utils.CommonUtil
 import demo.xm.com.demo.down2.utils.FileUtil
@@ -34,6 +35,7 @@ class DownCore {
         private var buffer: ByteArray? = null
         private var tempSuffix: String? = ""
         private var threadNamePrefix: String? = ""
+        private var downDao: DownDao? = null
 
         init {
             this.dir = builder?.dir
@@ -44,6 +46,7 @@ class DownCore {
             this.buffer = builder.buffer
             this.tempSuffix = builder.tempSuffix
             this.threadNamePrefix = builder.threadNamePrefix
+            this.downDao = builder.downDao
         }
 
 
@@ -79,6 +82,12 @@ class DownCore {
 
             //数据缓存到本地
             startIndex = 0
+
+            val downInfos = downDao?.query(downTask?.id!!)
+            if (downInfos?.isNotEmpty()!!) {
+                process = downInfos[0].progress.toLong()
+                BKLog.d(TAG, "本地缓存的下载信息:${downInfos.toString()}")
+            }
             FileUtil.write(inputStream, tempFile, buffer, startIndex, endIndex, object : OnWriteProcess {
                 override fun onProcess(process: Long, total: Long) {
                     this@DownCoreRunnable.process += process
@@ -130,6 +139,7 @@ class DownCore {
         var buffer: ByteArray? = null     //缓存的字节数组
         var tempSuffix: String? = ""      //临时文件的后缀
         var threadNamePrefix: String? = ""//线程名称的前缀
+        var downDao: DownDao? = null      //数据库操作类
 
         fun dir(dir: String?): Builder {
             this.dir = dir
@@ -168,6 +178,11 @@ class DownCore {
 
         fun threadNamePrefix(threadNamePrefix: String?): Builder {
             this.threadNamePrefix = threadNamePrefix
+            return this
+        }
+
+        fun downDao(downDao: DownDao?): Builder {
+            this.downDao = downDao
             return this
         }
 

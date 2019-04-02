@@ -2,6 +2,7 @@ package demo.xm.com.demo.down2
 
 import android.content.Context
 import android.text.TextUtils
+import demo.xm.com.demo.down2.db.DownDao
 import demo.xm.com.demo.down2.log.BKLog
 import demo.xm.com.demo.down2.utils.CommonUtil
 import demo.xm.com.demo.down2.utils.FileUtil
@@ -25,6 +26,7 @@ class DownTasker {
         const val tag = "DownTasker"
     }
 
+    private var downDao: DownDao? = null
     private var downManager: DownManager? = null
     private var downConfig: DownConfig? = null
     var downTask: DownTask? = null
@@ -33,10 +35,11 @@ class DownTasker {
     private constructor() : super()
 
     constructor(builder: Builder) {
+        downDao = builder.downDao
         downManager = builder.downManager
         downTask = builder.downTask
         downConfig = builder.downConfig
-        runnable = DownTaskerRunnable(this, downManager, downTask, downConfig)
+        runnable = DownTaskerRunnable(this, downDao, downManager, downTask, downConfig)
     }
 
     fun enqueue() {
@@ -55,7 +58,7 @@ class DownTasker {
     /**
      * 分段下载Runnable接口
      */
-    private class DownTaskerRunnable(val downTasker: DownTasker, val downManager: DownManager?, val downTask: DownTask?, downConfig: DownConfig?) : Runnable {
+    private class DownTaskerRunnable(val downTasker: DownTasker, val downDao: DownDao?, val downManager: DownManager?, val downTask: DownTask?, downConfig: DownConfig?) : Runnable {
 
         private var url: String = ""
         private var ctx: Context? = null
@@ -126,7 +129,7 @@ class DownTasker {
                 BKLog.d(tag, "downCores is null")
             }
 
-            downManager?.downObserverable?.notifyObserverComplete(downTasker,total.toLong()) //下载完成通知观察者
+            downManager?.downObserverable?.notifyObserverComplete(downTasker, total.toLong()) //下载完成通知观察者
             downManager?.dispatcher?.finish(downTasker)    //任务下载完成通知分发器
         }
 
@@ -160,7 +163,7 @@ class DownTasker {
             val downCores = ArrayList<DownCore>()
             val maxMultipleThreadSize = maxMultipleThreadNum - 1
             for (i in 0..maxMultipleThreadSize) {
-                val pair = getDownIndex(i, segmentSize, maxMultipleThreadSize)  //获取分段下载范围 PS:若是最后
+                val pair = getDownIndex(i, segmentSize, maxMultipleThreadSize)  //获取分段下载范围 PS:如果数据存在则直接放回记录
 
                 val threadName = threadNamePrefix + i           //构建下载Runnable
                 val downCore = DownCore.Builder().dir(dir)
@@ -171,6 +174,7 @@ class DownTasker {
                         .buffer(buffer)
                         .threadNamePrefix(threadNamePrefix)
                         .tempSuffix(tempSuffix)
+                        .downDao(downDao)
                         .build()
 
                 downCores.add(downCore)//线程集合
@@ -185,7 +189,15 @@ class DownTasker {
 
         private fun getDownIndex(i: Int, segmentSize: Int, maxMultipleThreadSize: Int): Pair<Int, Int> {
             /*获取下载判断范围*/
-            val startIndex = i * segmentSize
+            var startIndex = i * segmentSize
+
+            //获取缓存的下载进度（字节）
+            val downInfos = downDao?.query(downTask?.id!!)
+            if (downInfos?.isNotEmpty()!!) {
+                startIndex = downInfos[0].progress
+                BKLog.d(tag, "本地缓存的下载信息:${downInfos.toString()}")
+            }
+
             var endIndex = ((i + 1) * segmentSize) - 1
             if (i == maxMultipleThreadSize) {
                 endIndex = -1
@@ -205,6 +217,7 @@ class DownTasker {
      * 下载者构建类
      */
     class Builder {
+        var downDao: DownDao? = null
         var downManager: DownManager? = null//下载管理器
         var downTask: DownTask? = null//下载任务信息
         var downConfig: DownConfig? = null//下载配置信息
@@ -224,13 +237,17 @@ class DownTasker {
             return this
         }
 
+        fun setDownDao(downDao: DownDao?): Builder {
+            this.downDao = downDao
+            return this
+        }
+
         fun build(): DownTasker {
             if (downManager == null) throw NullPointerException("downManager is null")
             if (downTask == null) throw NullPointerException("downTask is null")
             if (downConfig == null) throw NullPointerException("downConfig is null")
+            if (downDao == null) throw NullPointerException("downDao is null")
             return DownTasker(this)
         }
-
-
     }
 }

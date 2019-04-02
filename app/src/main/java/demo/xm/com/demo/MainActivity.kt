@@ -18,7 +18,6 @@ import demo.xm.com.demo.down2.db.DownDao
 import demo.xm.com.demo.down2.log.BKLog
 import demo.xm.com.demo.down2.utils.CommonUtil.md5
 import demo.xm.com.demo.down2.utils.FileUtil
-import java.util.*
 
 
 /**
@@ -34,11 +33,11 @@ class MainActivity : AppCompatActivity(), DownObserver {
     private var tag = "MainActivity"
     private var downManager: DownManager? = null
     private val downUrlArray = arrayOf(
-            "http://img1.imgtn.bdimg.com/it/u=2735633715,2749454924&fm=26&gp=0.jpg",
-            "http://img4.imgtn.bdimg.com/it/u=3590849871,3724521821&fm=26&gp=0.jpg",
-            "http://img5.imgtn.bdimg.com/it/u=4060543606,3642835235&fm=26&gp=0.jpg",
-            "http://img1.imgtn.bdimg.com/it/u=2430510654,3359275973&fm=26&gp=0.jpg",
-            "http://img0.imgtn.bdimg.com/it/u=3967239004,1951414302&fm=26&gp=0.jpg",
+//            "http://img1.imgtn.bdimg.com/it/u=2735633715,2749454924&fm=26&gp=0.jpg",
+//            "http://img4.imgtn.bdimg.com/it/u=3590849871,3724521821&fm=26&gp=0.jpg",
+//            "http://img5.imgtn.bdimg.com/it/u=4060543606,3642835235&fm=26&gp=0.jpg",
+//            "http://img1.imgtn.bdimg.com/it/u=2430510654,3359275973&fm=26&gp=0.jpg",
+//            "http://img0.imgtn.bdimg.com/it/u=3967239004,1951414302&fm=26&gp=0.jpg",
             "https://cavedl.leiting.com/full/caveonline_M141859.apk",
             "http://gyxz.ukdj3d.cn/vp/yx_sw1/warsong.apk",
             "http://gyxz.ukdj3d.cn/vp1/yx_ljun1/Pokemmo.apk",
@@ -68,6 +67,21 @@ class MainActivity : AppCompatActivity(), DownObserver {
         myAdapter = MyAdapter(downManager)
         rv?.adapter = myAdapter
         rv?.layoutManager = LinearLayoutManager(this)
+        displayCache()
+    }
+
+    private fun displayCache() {
+        /*读取数据库的记录*/
+        val downInfos = downManager?.downDao?.queryAll()
+        if (downInfos?.isNotEmpty()!!) {
+            //刷新RecyclerView页面
+            myAdapter?.data?.addAll(downInfos)
+            val posStart = 0
+            val itemCount = myAdapter?.data?.size
+            myAdapter?.notifyItemRangeChanged(posStart, itemCount!!)
+        } else {
+            BKLog.d(tag, "读取数据库中下载信息为空")
+        }
     }
 
     private fun initEvent() {
@@ -75,8 +89,9 @@ class MainActivity : AppCompatActivity(), DownObserver {
         btnAdd?.setOnClickListener {
             if (count < downUrlArray.size) {
                 val downInfo = DownDBContract.DownInfo()
-                downInfo.url = downInfo.url
-                downInfo.uuid = md5(downInfo.url)
+                val url = downUrlArray[count]
+                downInfo.url = url
+                downInfo.uuid = md5(url)
                 downInfo.name = downUrlArray[count]
                 downInfo.progress = 0
                 downInfo.state = "点击开始"
@@ -104,6 +119,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
         BKLog.i(tag, "process $process total$total present$present")
         BKLog.i(tag, " ")
         updateDownInfo("onProcess", tasker, process, total, present)
+        cache("onProcess", tasker, process, total, present)
     }
 
     override fun onComplete(tasker: DownTasker, total: Long) {
@@ -111,6 +127,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
         BKLog.d(tag, "onComplete ${tasker.downTask.toString()}")
         BKLog.d(tag, " ")
         updateDownInfo("onComplete", tasker, -1, total)
+        cache("onComplete", tasker, -1, total)
     }
 
     override fun onError(tasker: DownTasker, typeError: DownErrorType) {
@@ -118,9 +135,41 @@ class MainActivity : AppCompatActivity(), DownObserver {
         BKLog.d(tag, "onError ${tasker.downTask.toString()}")
         BKLog.d(tag, " ")
         updateDownInfo("onError", tasker, -1, -1, -1f, typeError)
+        cache("onError", tasker, -1, -1, -1f, typeError)
+    }
+
+    private fun cache(type: String, tasker: DownTasker, process: Long = -1, total: Long = -1, present: Float = -1f, typeError: DownErrorType = DownErrorType.UNKNOWN) {
+
+        /*缓存数据*/
+        val downInfos = myAdapter?.data!! as ArrayList<DownDBContract.DownInfo>
+        for (i in 0..(downInfos.size - 1)) {
+            val downInfo = downInfos[i]
+            downManager?.downDao?.insert(downInfo)
+            if (downInfo.name == tasker.downTask?.url) {
+                when (type) {
+                    "onProcess" -> {
+                        downInfo.state = "正在下载中..."
+                        downInfo.progress = process.toInt()
+                        downInfo.present = present.toInt()
+                        downInfo.total = total.toInt()
+                        downManager?.downDao?.update(downInfo)
+                    }
+                    "onComplete" -> {
+                        downInfo.state = "下载完成"
+                        downInfo.progress = total.toInt()
+                        downManager?.downDao?.update(downInfo)
+                    }
+                    "onError" -> {
+                        downInfo.state = "下载错误"
+                        downManager?.downDao?.update(downInfo)
+                    }
+                }
+            }
+        }
     }
 
     private fun updateDownInfo(type: String, tasker: DownTasker, process: Long = -1, total: Long = -1, present: Float = -1f, typeError: DownErrorType = DownErrorType.UNKNOWN) {
+        /*刷新下载信息*/
         val downInfos = myAdapter?.data!! as ArrayList<DownDBContract.DownInfo>
         for (i in 0..(downInfos.size - 1)) {
             val downInfo = downInfos[i]
@@ -132,7 +181,6 @@ class MainActivity : AppCompatActivity(), DownObserver {
                         downInfo.present = present.toInt()
                         downInfo.total = total.toInt()
                     }
-
                     "onComplete" -> {
                         downInfo.state = "下载完成"
                         downInfo.progress = total.toInt()
@@ -189,7 +237,7 @@ private class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             mTv_state?.text = "正在努力连接中..."
             mProgressBar?.progress = 0
             val downTask = DownTask.Builder()
-                    //.id(UUID.randomUUID().toString().replace("-", ""))
+                    .id(downInfo.uuid)
                     .url(downInfo.name)
                     .build()
             val downTasker = downManager?.newDownTasker(downTask)
