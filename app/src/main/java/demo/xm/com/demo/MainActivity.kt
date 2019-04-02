@@ -10,13 +10,25 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
-import demo.xm.com.demo.down2.*
-import demo.xm.com.demo.down2.log.BKLog
-import android.widget.TextView
 import android.widget.ProgressBar
+import android.widget.TextView
+import demo.xm.com.demo.down2.*
+import demo.xm.com.demo.down2.db.DownDBContract
+import demo.xm.com.demo.down2.db.DownDao
+import demo.xm.com.demo.down2.log.BKLog
+import demo.xm.com.demo.down2.utils.CommonUtil.md5
 import demo.xm.com.demo.down2.utils.FileUtil
+import java.util.*
 
 
+/**
+ * 测试功能点
+ * 1 在空间不足的情况下
+ * 2 添加多个任务查看下载是否正常
+ * 3 查看断点下载功能是否正常     https://blog.csdn.net/modurookie/article/details/80830763
+ * 4 重复地址下载地址怎么处理
+ * 5 在不同系统下是否正常
+ */
 class MainActivity : AppCompatActivity(), DownObserver {
 
     private var tag = "MainActivity"
@@ -62,12 +74,14 @@ class MainActivity : AppCompatActivity(), DownObserver {
         var count = 0
         btnAdd?.setOnClickListener {
             if (count < downUrlArray.size) {
-                val downInfo = DownInfo()
+                val downInfo = DownDBContract.DownInfo()
+                downInfo.url = downInfo.url
+                downInfo.uuid = md5(downInfo.url)
                 downInfo.name = downUrlArray[count]
                 downInfo.progress = 0
                 downInfo.state = "点击开始"
                 downInfo.total = 0
-                downInfo.present = 0f
+                downInfo.present = 0
                 //累加刷新
                 val posStart = myAdapter?.data?.size
                 val itemCount = 1
@@ -107,7 +121,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
     }
 
     private fun updateDownInfo(type: String, tasker: DownTasker, process: Long = -1, total: Long = -1, present: Float = -1f, typeError: DownErrorType = DownErrorType.UNKNOWN) {
-        val downInfos = myAdapter?.data!! as ArrayList<DownInfo>
+        val downInfos = myAdapter?.data!! as ArrayList<DownDBContract.DownInfo>
         for (i in 0..(downInfos.size - 1)) {
             val downInfo = downInfos[i]
             if (downInfo.name == tasker.downTask?.url) {
@@ -115,7 +129,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
                     "onProcess" -> {
                         downInfo.state = "正在下载中..."
                         downInfo.progress = process.toInt()
-                        downInfo.present = present.toFloat()
+                        downInfo.present = present.toInt()
                         downInfo.total = total.toInt()
                     }
 
@@ -160,7 +174,7 @@ private class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     }
 
     @SuppressLint("SetTextI18n")
-    fun bind(downInfo: DownInfo, downManager: DownManager?) {
+    fun bind(downInfo: DownDBContract.DownInfo, downManager: DownManager?) {
         bindViews(itemView)
         mTv_name?.text = downInfo.name
         mTv_down_des?.text = FileUtil.getSizeUnit(downInfo.progress.toLong()) + "/ " + FileUtil.getSizeUnit(downInfo.total.toLong())
@@ -200,14 +214,7 @@ private class MyAdapter(var downManager: DownManager?, var data: ArrayList<Any>?
     }
 
     override fun onBindViewHolder(p0: MyViewHolder, p1: Int) {
-        p0.bind(data?.get(p1) as DownInfo, downManager)
+        p0.bind(data?.get(p1) as DownDBContract.DownInfo, downManager)
     }
 }
 
-private class DownInfo {
-    var name = ""
-    var progress = 0
-    var state = ""
-    var total = 0
-    var present = 0f
-}

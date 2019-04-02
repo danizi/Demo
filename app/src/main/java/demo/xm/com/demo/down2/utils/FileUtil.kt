@@ -359,7 +359,7 @@ object FileUtil {
             while (fc.read(nbuBuffer) != -1) {
                 bb.flip()
                 nbuBuffer.flip()
-                outChannel.write(nbuBuffer)
+                outChannel.write(nbuBuffer)    // write failed: ENOSPC (No space left on device)
                 bb.clear()
                 nbuBuffer.clear()
             }
