@@ -9,6 +9,7 @@ import demo.xm.com.demo.down2.utils.OnWriteProcess
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.atomic.AtomicBoolean
 
 class DownCore {
 
@@ -36,6 +37,7 @@ class DownCore {
         private var tempSuffix: String? = ""
         private var threadNamePrefix: String? = ""
         private var downDao: DownDao? = null
+        var flag: AtomicBoolean = AtomicBoolean(true)
 
         init {
             this.dir = builder?.dir
@@ -48,7 +50,6 @@ class DownCore {
             this.threadNamePrefix = builder.threadNamePrefix
             this.downDao = builder.downDao
         }
-
 
         override fun run() {
             val startTime = System.currentTimeMillis()
@@ -86,21 +87,27 @@ class DownCore {
             val downInfos = downDao?.query(downTask?.id!!)
             if (downInfos?.isNotEmpty()!!) {
                 process = downInfos[0].progress.toLong()
+                startIndex = process
                 BKLog.d(TAG, "本地缓存的下载信息:${downInfos.toString()}")
             }
             FileUtil.write(inputStream, tempFile, buffer, startIndex, endIndex, object : OnWriteProcess {
-                override fun onProcess(process: Long, total: Long) {
+                override fun onProcess(process: Long, total: Long): Boolean {
                     this@DownCoreRunnable.process += process
                     BKLog.i(TAG, CommonUtil.getFileName(downTask?.url) + " - $tempFileName" + "下载字节：$process" + "分段文件总大小：$total")
+                    return flag.get()
                 }
             })
 
-            //下载完成状态
-            downState = true
+            if (flag.get()) {
+                //下载完成状态
+                downState = true
 
-            //打印下载总耗时
-            val endTime = System.currentTimeMillis()
-            BKLog.d(TAG, CommonUtil.getFileName(downTask?.url) + " - " + tempFileName + "下载完成，总耗时：" + (endTime - startTime) / 1000)
+                //打印下载总耗时
+                val endTime = System.currentTimeMillis()
+                BKLog.d(TAG, CommonUtil.getFileName(downTask?.url) + " - " + tempFileName + "下载完成，总耗时：" + (endTime - startTime) / 1000)
+            } else {
+                BKLog.d(TAG, "退出停止下载操作")
+            }
         }
 
 

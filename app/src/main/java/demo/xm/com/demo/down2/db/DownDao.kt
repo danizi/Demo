@@ -59,7 +59,6 @@ class DownDao(context: Context?) {
                         downInfo.present,
                         downInfo.total,
                         downInfo.progress,
-                        downInfo.absolutePath,
                         downInfo.uuid /*查询条件*/))
         helper?.writableDatabase?.close()
     }
@@ -81,8 +80,8 @@ class DownDao(context: Context?) {
             down.url = cursor.getString(2)
             down.name = cursor.getString(3)
             down.present = cursor.getInt(4)
-            down.progress = cursor.getInt(5)
-            down.total = cursor.getInt(6)
+            down.total = cursor.getInt(5)
+            down.progress = cursor.getInt(6)
             down.absolutePath = cursor.getString(7)
             down.state = "点击恢复下载"
             downs.add(down)
@@ -106,8 +105,8 @@ class DownDao(context: Context?) {
             down.url = cursor.getString(2)
             down.name = cursor.getString(3)
             down.present = cursor.getInt(4)
-            down.progress = cursor.getInt(5)
-            down.total = cursor.getInt(6)
+            down.total = cursor.getInt(5)
+            down.progress = cursor.getInt(6)
             down.absolutePath = cursor.getString(7)
             down.state = "点击恢复下载"
             downs.add(down)

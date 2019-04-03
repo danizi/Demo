@@ -47,9 +47,18 @@ class DownDispatcher {
         for (tasker in readyQueue!!) {
             if (runingQueue?.size!! < poolCount) {
                 runingQueue?.add(tasker)
-                pool?.execute(tasker.runnable)
+               pool?.execute(tasker.runnable)
                 readyQueue?.remove(tasker)
                 BKLog.d(tag, "从准备队列中，提取${tasker?.downTask?.url}任务添加到下载runingQueue")
+            }
+        }
+    }
+
+    fun removeAll() {
+        if (runingQueue?.isNotEmpty()!!) {
+            for (run in runingQueue!!) {
+                run.cancel()
+                pool?.remove(run.runnable)
             }
         }
     }

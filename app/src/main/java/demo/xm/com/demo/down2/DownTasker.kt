@@ -12,6 +12,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  *  多线程下载器
@@ -53,6 +54,7 @@ class DownTasker {
 
     fun cancel() {
         /*取消下载任务，并将缓存删除*/
+        (runnable as DownTaskerRunnable).removePool()
     }
 
     /**
@@ -71,6 +73,7 @@ class DownTasker {
         private var maxMultipleThreadNum: Int = 0
         private var connectTimeout: Int = 0
         private var readTimeout: Int = 0
+        var flag: AtomicBoolean = AtomicBoolean(true)
 
         init {
             this.url = downTask?.url!!
@@ -116,28 +119,34 @@ class DownTasker {
                 BKLog.d(tag, "根据用户配置获取名称，下载文件名称:$fileName")
                 FileUtil.createNewFile(path, dir, fileName)
             }
-            val downCores = createMultipleThread(segmentSize)//创建下载线程
-            if (downCores?.isNotEmpty()!!) {
+            this.downCores = createMultipleThread(segmentSize)!!//创建下载线程
+            if (downCores.isNotEmpty()) {
                 addPool(downCores)  // 线程加到线程池中执行
                 getProcess(downCores, file, total) //获取下载的进度
 
-                //合并文件，合并成功，删除临时文件 PS:合成过程中需要对临时文件需要进行排序
-                val inFile = File(file.absolutePath + "_Temp")
-                FileUtil.mergeFiles(file, inFile)
-                FileUtil.del(inFile)
+                if (complete) {
+                    //合并文件，合并成功，删除临时文件 PS:合成过程中需要对临时文件需要进行排序
+                    val inFile = File(file.absolutePath + "_Temp")
+                    FileUtil.mergeFiles(file, inFile)
+                    FileUtil.del(inFile)
+                }
+
             } else {
                 BKLog.d(tag, "downCores is null")
             }
 
-            downManager?.downObserverable?.notifyObserverComplete(downTasker, total.toLong()) //下载完成通知观察者
-            downManager?.dispatcher?.finish(downTasker)    //任务下载完成通知分发器
+            if (complete) {
+                downManager?.downObserverable?.notifyObserverComplete(downTasker, total.toLong()) //下载完成通知观察者
+                downManager?.dispatcher?.finish(downTasker)    //任务下载完成通知分发器
+            }
         }
 
+        var complete = false
         private fun getProcess(downCores: ArrayList<DownCore>, file: File, total: Int) {
             /*获取下载进度*/
-            var complete = false
+            complete = false
             var process: Long = 0
-            while (!complete) {
+            while (!complete && flag.get()) {
                 complete = true
 
                 //遍历每个分段下载的状态，如果全部都下载成功
@@ -155,6 +164,9 @@ class DownTasker {
                     }
                     downManager?.downObserverable?.notifyObserverProcess(downTasker, process, total.toLong(), ((process * 100 / total)).toFloat())//下载进度通知观察者
                 }
+            }
+            if (!flag.get()) {
+                complete = false
             }
         }
 
@@ -205,10 +217,20 @@ class DownTasker {
             return Pair(startIndex, endIndex)
         }
 
+        private var downCores = ArrayList<DownCore>()
         private fun addPool(downCores: ArrayList<DownCore>) {
             /*将分段任务线程放入到线程池中，进行下载处理*/
             for (downCore in downCores) {
-                multiplePool?.submit(downCore.downCoreReadable)
+                multiplePool?.execute(downCore.downCoreReadable)
+            }
+        }
+
+        fun removePool() {
+            BKLog.d(tag, "flag -> false")
+            flag.set(false)
+            for (downCore in downCores) {
+                downCore.downCoreReadable?.flag?.set(false)
+                multiplePool?.remove(downCore.downCoreReadable)
             }
         }
     }

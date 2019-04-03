@@ -312,7 +312,10 @@ object FileUtil {
                 if (length == -1)
                     break
                 raf.write(buffer, 0, length)
-                listener?.onProcess(length.toLong(), endIndex)
+                if (!listener?.onProcess(length.toLong(), endIndex)!!) {
+                    BKLog.d("停止写入操作！！！")
+                    break
+                }
             }
             raf.close()
             bis.close()
@@ -389,5 +392,5 @@ interface OnWriteProcess {
     /**
      * 文件写入进度，process , total （单位：B）
      */
-    fun onProcess(process: Long, total: Long)
+    fun onProcess(process: Long, total: Long): Boolean
 }

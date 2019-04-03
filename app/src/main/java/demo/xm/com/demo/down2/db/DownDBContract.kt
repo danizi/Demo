@@ -61,7 +61,6 @@ class DownDBContract {
                 "$COLUMN_URL = ?," +
                 "$COLUMN_PRESENT = ?," +
                 "$COLUMN_TOTAL = ?," +
-                "$COLUMN_PROCESS = ?," +
                 "$COLUMN_PROCESS = ? WHERE $COLUMN_UUID = ?"
 
 

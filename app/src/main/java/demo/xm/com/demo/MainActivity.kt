@@ -110,6 +110,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
 
     override fun onDestroy() {
         super.onDestroy()
+        downManager?.dispatcher?.removeAll()
         downManager?.downObserverable?.removeObserver(this)
     }
 
@@ -232,10 +233,11 @@ private class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         if (downInfo.progress == 100) {
             itemView.isClickable = true
         }
+        mTv_state?.text = downInfo.state
         itemView.setOnClickListener {
             itemView.isClickable = false
             mTv_state?.text = "正在努力连接中..."
-            mProgressBar?.progress = 0
+            //mProgressBar?.progress = 0
             val downTask = DownTask.Builder()
                     .id(downInfo.uuid)
                     .url(downInfo.name)
