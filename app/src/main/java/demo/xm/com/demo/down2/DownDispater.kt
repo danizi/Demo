@@ -63,6 +63,11 @@ class DownDispatcher {
         }
     }
 
+    fun remove(downTasker: DownTasker) {
+        runingQueue?.remove(downTasker)
+        readyQueue?.remove(downTasker)
+    }
+
     /**
      * 建造者
      */

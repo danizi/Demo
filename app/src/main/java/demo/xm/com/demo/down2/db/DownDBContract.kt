@@ -1,5 +1,7 @@
 package demo.xm.com.demo.down2.db
 
+import demo.xm.com.demo.down2.DownTask
+
 /**
  * 数据库契约类
  */
@@ -82,8 +84,6 @@ class DownDBContract {
         var absolutePath = ""
         var state = ""
         var url = ""
-
-        constructor()
 
         constructor(uuid: String = "", name: String = "", present: Int = 0, progress: Int = 0, total: Int = 0, absolutePath: String = "", state: String = "", url: String = "") {
             this.uuid = uuid

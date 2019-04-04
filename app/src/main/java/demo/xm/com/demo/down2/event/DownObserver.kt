@@ -1,4 +1,7 @@
-package demo.xm.com.demo.down2
+package demo.xm.com.demo.down2.event
+
+import demo.xm.com.demo.down2.DownErrorType
+import demo.xm.com.demo.down2.DownTasker
 
 /**
  * 观察者接口

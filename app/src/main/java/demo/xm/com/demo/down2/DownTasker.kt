@@ -49,7 +49,8 @@ class DownTasker {
     }
 
     fun pause() {
-        /*暂停队列*/
+        /*暂停队列,将*/
+        downManager?.dispatcher?.remove(this)
     }
 
     fun cancel() {

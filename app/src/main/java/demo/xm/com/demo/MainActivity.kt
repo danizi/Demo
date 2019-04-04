@@ -2,6 +2,7 @@ package demo.xm.com.demo
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.os.Environment
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
@@ -12,12 +13,19 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
-import demo.xm.com.demo.down2.*
+import demo.xm.com.demo.down2.DownErrorType
+import demo.xm.com.demo.down2.DownManager
+import demo.xm.com.demo.down2.DownTask
+import demo.xm.com.demo.down2.DownTasker
 import demo.xm.com.demo.down2.db.DownDBContract
-import demo.xm.com.demo.down2.db.DownDao
+import demo.xm.com.demo.down2.event.DownObserver
 import demo.xm.com.demo.down2.log.BKLog
+import demo.xm.com.demo.down2.runnable.OnListener
+import demo.xm.com.demo.down2.runnable.SingleRunnable
 import demo.xm.com.demo.down2.utils.CommonUtil.md5
 import demo.xm.com.demo.down2.utils.FileUtil
+import demo.xm.com.demo.down2.utils.FileUtil.createNewFile
+import java.io.RandomAccessFile
 
 
 /**
@@ -51,7 +59,11 @@ class MainActivity : AppCompatActivity(), DownObserver {
         findViews()
         iniData()
         initEvent()
+
+
     }
+
+    var singleRunnable: SingleRunnable? = null
 
     private var rv: RecyclerView? = null
     private var btnAdd: Button? = null
@@ -68,6 +80,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
         rv?.adapter = myAdapter
         rv?.layoutManager = LinearLayoutManager(this)
         displayCache()
+
     }
 
     private fun displayCache() {
@@ -84,9 +97,44 @@ class MainActivity : AppCompatActivity(), DownObserver {
         }
     }
 
+    private fun test() {
+        val url = "https://download.tanwan.com/h5dgcqlczg/h5dgcqlczg_239277.apk"   //39.38MB
+        val path = Environment.getExternalStorageDirectory().absolutePath
+        val dir = "xmDown"
+        val fileName = "h5dgcqlczg_239277.apk"
+        val file = createNewFile(path, dir, fileName)
+        val startIndex = file.length()
+        val endIndex = -1
+        val raf = RandomAccessFile(file, "rwd")
+        raf.seek(0)
+
+        singleRunnable = SingleRunnable()
+        singleRunnable?.url = url
+        singleRunnable?.raf = raf
+        singleRunnable?.downManager = downManager
+        singleRunnable?.rangeStartIndex = startIndex.toInt()
+        singleRunnable?.rangeEndIndex = endIndex
+        singleRunnable?.process = startIndex
+        singleRunnable?.listener = object : OnListener {
+            override fun onProcess(singleRunnable: SingleRunnable, process: Long, total: Long, present: Float) {
+
+            }
+
+            override fun onComplete(singleRunnable: SingleRunnable, total: Long) {
+                singleRunnable.exit()
+            }
+
+            override fun onError(singleRunnable: SingleRunnable, type: DownErrorType, s: String) {
+                singleRunnable.exit()
+            }
+        }
+        Thread(singleRunnable).start()
+    }
+
     private fun initEvent() {
         var count = 0
         btnAdd?.setOnClickListener {
+            //创建的内容
             if (count < downUrlArray.size) {
                 val downInfo = DownDBContract.DownInfo()
                 val url = downUrlArray[count]
@@ -112,6 +160,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
         super.onDestroy()
         downManager?.dispatcher?.removeAll()
         downManager?.downObserverable?.removeObserver(this)
+        singleRunnable?.exit()
     }
 
     override fun onProcess(tasker: DownTasker, process: Long, total: Long, present: Float) {
@@ -140,7 +189,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
     }
 
     private fun cache(type: String, tasker: DownTasker, process: Long = -1, total: Long = -1, present: Float = -1f, typeError: DownErrorType = DownErrorType.UNKNOWN) {
-
+        return
         /*缓存数据*/
         val downInfos = myAdapter?.data!! as ArrayList<DownDBContract.DownInfo>
         for (i in 0..(downInfos.size - 1)) {
@@ -170,6 +219,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
     }
 
     private fun updateDownInfo(type: String, tasker: DownTasker, process: Long = -1, total: Long = -1, present: Float = -1f, typeError: DownErrorType = DownErrorType.UNKNOWN) {
+        return
         /*刷新下载信息*/
         val downInfos = myAdapter?.data!! as ArrayList<DownDBContract.DownInfo>
         for (i in 0..(downInfos.size - 1)) {

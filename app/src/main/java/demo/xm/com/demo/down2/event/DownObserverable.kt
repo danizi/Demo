@@ -1,5 +1,8 @@
-package demo.xm.com.demo.down2
+package demo.xm.com.demo.down2.event
 
+import demo.xm.com.demo.down2.DownErrorType
+import demo.xm.com.demo.down2.DownTasker
+import demo.xm.com.demo.down2.log.BKLog
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -7,6 +10,10 @@ import java.util.concurrent.LinkedBlockingQueue
  * 被观察接口
  */
 class DownObserverable {
+    companion object {
+        const val TAG = "DownObserverable"
+    }
+
     private var queue: BlockingQueue<DownObserver>? = LinkedBlockingQueue<DownObserver>()
 
     @Synchronized
@@ -24,14 +31,17 @@ class DownObserverable {
         for (downObserverable in queue!!) {
             when (type) {
                 0 -> {
+                    BKLog.e(TAG, "notifyObserverComplete total $total")
                     downObserverable.onComplete(tasker, total)
                 }
                 1 -> {
                     if (typeError == null) return
+                    BKLog.e(TAG, "notifyObserverError typeError $typeError")
                     downObserverable.onError(tasker, typeError)
                 }
                 2 -> {
                     if (process > 0 && total > 0 && present > 0) {
+                        BKLog.i(TAG, "notifyObserverProcess process $process total $total present $present")
                         downObserverable.onProcess(tasker, process, total, present)
                     }
                 }
@@ -39,15 +49,15 @@ class DownObserverable {
         }
     }
 
-    fun notifyObserverComplete(tasker: DownTasker, total: Long) {
-        notifyObserver(0, tasker, null, -1,total)
+    fun notifyObserverComplete(tasker: DownTasker?, total: Long) {
+        notifyObserver(0, tasker, null, -1, total)
     }
 
-    fun notifyObserverError(tasker: DownTasker, typeError: DownErrorType) {
+    fun notifyObserverError(tasker: DownTasker?, typeError: DownErrorType) {
         notifyObserver(1, tasker, typeError)
     }
 
-    fun notifyObserverProcess(tasker: DownTasker, process: Long, total: Long, present: Float) {
+    fun notifyObserverProcess(tasker: DownTasker?, process: Long, total: Long, present: Float) {
         notifyObserver(2, tasker, null, process, total, present)
     }
 }

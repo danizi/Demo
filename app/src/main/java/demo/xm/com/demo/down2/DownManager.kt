@@ -2,11 +2,13 @@ package demo.xm.com.demo.down2
 
 import android.content.Context
 import demo.xm.com.demo.down2.db.DownDao
+import demo.xm.com.demo.down2.event.DownObserverable
 
 /**
  * 下载
  */
 class DownManager {
+
     var downDao: DownDao? = null
     var dispatcher: DownDispatcher? = null
     var downConfig: DownConfig? = null
