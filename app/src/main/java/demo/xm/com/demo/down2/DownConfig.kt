@@ -24,7 +24,7 @@ class DownConfig {
     var maxMultipleThreadNum = 1
     var ctx: Context? = null
 
-    constructor() {
+    private constructor() {
         Builder().build()
     }
 

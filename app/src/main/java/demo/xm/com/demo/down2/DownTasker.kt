@@ -58,6 +58,44 @@ class DownTasker {
     }
 
     /**
+     * 下载者构建类
+     */
+    class Builder {
+        var downDao: DownDao? = null
+        var downManager: DownManager? = null//下载管理器
+        var downTask: DownTask? = null//下载任务信息
+        var downConfig: DownConfig? = null//下载配置信息
+
+        fun setDownManager(downManager: DownManager?): Builder {
+            this.downManager = downManager
+            return this
+        }
+
+        fun setTask(task: DownTask): Builder {
+            this.downTask = task
+            return this
+        }
+
+        fun setConfig(downConfig: DownConfig?): Builder {
+            this.downConfig = downConfig
+            return this
+        }
+
+        fun setDownDao(downDao: DownDao?): Builder {
+            this.downDao = downDao
+            return this
+        }
+
+        fun build(): DownTasker {
+            if (downManager == null) throw NullPointerException("downManager is null")
+            if (downTask == null) throw NullPointerException("downTask is null")
+            if (downConfig == null) throw NullPointerException("downConfig is null")
+            if (downDao == null) throw NullPointerException("downDao is null")
+            return DownTasker(this)
+        }
+    }
+
+    /**
      * 分段下载Runnable接口
      */
     private class DownTaskerRunnable(val downTasker: DownTasker, val downDao: DownDao?, val downManager: DownManager?, val downTask: DownTask?, downConfig: DownConfig?) : Runnable {
@@ -232,44 +270,6 @@ class DownTasker {
                 downCore.downCoreReadable?.flag?.set(false)
                 multiplePool?.remove(downCore.downCoreReadable)
             }
-        }
-    }
-
-    /**
-     * 下载者构建类
-     */
-    class Builder {
-        var downDao: DownDao? = null
-        var downManager: DownManager? = null//下载管理器
-        var downTask: DownTask? = null//下载任务信息
-        var downConfig: DownConfig? = null//下载配置信息
-
-        fun setDownManager(downManager: DownManager?): Builder {
-            this.downManager = downManager
-            return this
-        }
-
-        fun setTask(task: DownTask): Builder {
-            this.downTask = task
-            return this
-        }
-
-        fun setConfig(downConfig: DownConfig?): Builder {
-            this.downConfig = downConfig
-            return this
-        }
-
-        fun setDownDao(downDao: DownDao?): Builder {
-            this.downDao = downDao
-            return this
-        }
-
-        fun build(): DownTasker {
-            if (downManager == null) throw NullPointerException("downManager is null")
-            if (downTask == null) throw NullPointerException("downTask is null")
-            if (downConfig == null) throw NullPointerException("downConfig is null")
-            if (downDao == null) throw NullPointerException("downDao is null")
-            return DownTasker(this)
         }
     }
 }
