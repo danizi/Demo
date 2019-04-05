@@ -111,6 +111,7 @@ class DownDao(context: Context?) {
             down.state = "点击恢复下载"
             downs.add(down)
         }
+        cursor.close()
         helper?.writableDatabase?.close()
         return downs
     }

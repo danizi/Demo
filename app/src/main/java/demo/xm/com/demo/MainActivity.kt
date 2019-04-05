@@ -14,7 +14,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import demo.xm.com.demo.down2.*
 import demo.xm.com.demo.down2.db.DownDBContract
-import demo.xm.com.demo.down2.db.DownDao
 import demo.xm.com.demo.down2.log.BKLog
 import demo.xm.com.demo.down2.utils.CommonUtil.md5
 import demo.xm.com.demo.down2.utils.FileUtil
@@ -33,17 +32,19 @@ class MainActivity : AppCompatActivity(), DownObserver {
     private var tag = "MainActivity"
     private var downManager: DownManager? = null
     private val downUrlArray = arrayOf(
-//            "http://img1.imgtn.bdimg.com/it/u=2735633715,2749454924&fm=26&gp=0.jpg",
-//            "http://img4.imgtn.bdimg.com/it/u=3590849871,3724521821&fm=26&gp=0.jpg",
-//            "http://img5.imgtn.bdimg.com/it/u=4060543606,3642835235&fm=26&gp=0.jpg",
-//            "http://img1.imgtn.bdimg.com/it/u=2430510654,3359275973&fm=26&gp=0.jpg",
-//            "http://img0.imgtn.bdimg.com/it/u=3967239004,1951414302&fm=26&gp=0.jpg",
+            "http://img1.imgtn.bdimg.com/it/u=2735633715,2749454924&fm=26&gp=0.jpg",
+            "http://img4.imgtn.bdimg.com/it/u=3590849871,3724521821&fm=26&gp=0.jpg",
+            "http://img5.imgtn.bdimg.com/it/u=4060543606,3642835235&fm=26&gp=0.jpg",
+            "http://img1.imgtn.bdimg.com/it/u=2430510654,3359275973&fm=26&gp=0.jpg",
+            "http://img0.imgtn.bdimg.com/it/u=3967239004,1951414302&fm=26&gp=0.jpg",
             "https://cavedl.leiting.com/full/caveonline_M141859.apk",
             "http://gyxz.ukdj3d.cn/vp/yx_sw1/warsong.apk",
             "http://gyxz.ukdj3d.cn/vp1/yx_ljun1/Pokemmo.apk",
             "http://gyxz.ukdj3d.cn/hk1/yx_xxm1/shanshuozhiguang.apk"
     )
     private var myAdapter: MyAdapter? = null
+    private var rv: RecyclerView? = null
+    private var btnAdd: Button? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,9 +53,6 @@ class MainActivity : AppCompatActivity(), DownObserver {
         iniData()
         initEvent()
     }
-
-    private var rv: RecyclerView? = null
-    private var btnAdd: Button? = null
 
     private fun findViews() {
         rv = findViewById(R.id.rv)
@@ -88,6 +86,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
         var count = 0
         btnAdd?.setOnClickListener {
             if (count < downUrlArray.size) {
+
                 val downInfo = DownDBContract.DownInfo()
                 val url = downUrlArray[count]
                 downInfo.url = url
@@ -97,6 +96,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
                 downInfo.state = "点击开始"
                 downInfo.total = 0
                 downInfo.present = 0
+
                 //累加刷新
                 val posStart = myAdapter?.data?.size
                 val itemCount = 1
@@ -140,7 +140,6 @@ class MainActivity : AppCompatActivity(), DownObserver {
     }
 
     private fun cache(type: String, tasker: DownTasker, process: Long = -1, total: Long = -1, present: Float = -1f, typeError: DownErrorType = DownErrorType.UNKNOWN) {
-
         /*缓存数据*/
         val downInfos = myAdapter?.data!! as ArrayList<DownDBContract.DownInfo>
         for (i in 0..(downInfos.size - 1)) {
@@ -206,6 +205,9 @@ class MainActivity : AppCompatActivity(), DownObserver {
     }
 }
 
+/**
+ * ViewHolder
+ */
 private class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
     private var mIv_icon: ImageView? = null
@@ -229,11 +231,17 @@ private class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         mTv_down_des?.text = FileUtil.getSizeUnit(downInfo.progress.toLong()) + "/ " + FileUtil.getSizeUnit(downInfo.total.toLong())
         mTv_state?.text = downInfo.state
         mProgressBar?.max = 100
-        mProgressBar?.progress = downInfo.present.toInt()
+        mProgressBar?.progress = downInfo.present
+        mTv_state?.text = downInfo.state
+
+        //点击监听
+        initEvent(downInfo, downManager)
+    }
+
+    fun initEvent(downInfo: DownDBContract.DownInfo, downManager: DownManager?) {
         if (downInfo.progress == 100) {
             itemView.isClickable = true
         }
-        mTv_state?.text = downInfo.state
         itemView.setOnClickListener {
             itemView.isClickable = false
             mTv_state?.text = "正在努力连接中..."
@@ -248,6 +256,9 @@ private class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     }
 }
 
+/**
+ * 适配器
+ */
 private class MyAdapter(var downManager: DownManager?, var data: ArrayList<Any>? = ArrayList()) : RecyclerView.Adapter<MyViewHolder>() {
 
     override fun onCreateViewHolder(p0: ViewGroup, p1: Int): MyViewHolder {

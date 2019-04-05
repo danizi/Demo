@@ -148,6 +148,9 @@ class DownConfig {
             }
             if (multiplePool == null) {
                 multiplePool = ThreadPoolExecutor(maxMultipleThreadNum, maxMultipleThreadNum, 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
+                val queue = ArrayBlockingQueue<Runnable>(10)
+                val handler = ThreadPoolExecutor.AbortPolicy()
+                multiplePool = ThreadPoolExecutor(maxMultipleThreadNum, maxMultipleThreadNum, 0, TimeUnit.SECONDS, queue, handler)
             }
             if (connectTimeout == 0) {
                 connectTimeout = 60000

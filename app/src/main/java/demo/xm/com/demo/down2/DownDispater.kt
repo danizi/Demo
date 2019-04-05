@@ -3,6 +3,7 @@ package demo.xm.com.demo.down2
 import demo.xm.com.demo.down2.log.BKLog
 import java.util.concurrent.*
 
+
 /**
  * 下载调度器，管理下载任务，提供了下载监听，暂停，下载，添加任务，取消任务等职责
  * 生产者-消费者 并发队列 https://blog.csdn.net/qq_26676207/article/details/80844665 dfgfggsdfgs
@@ -93,7 +94,10 @@ class DownDispatcher {
                 poolCount = 3
             }
             if (pool == null) {
-                pool = ThreadPoolExecutor(poolCount, poolCount, 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
+                val queue = ArrayBlockingQueue<Runnable>(10)
+                val handler = ThreadPoolExecutor.AbortPolicy()
+                pool = ThreadPoolExecutor(poolCount, poolCount, 0, TimeUnit.SECONDS, queue, handler)
+//                pool = ThreadPoolExecutor(poolCount, poolCount, 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
             }
             return DownDispatcher(this)
         }
