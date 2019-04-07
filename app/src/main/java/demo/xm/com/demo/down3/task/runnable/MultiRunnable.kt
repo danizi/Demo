@@ -1,19 +1,19 @@
-package demo.xm.com.demo.down2.runnable
+package demo.xm.com.demo.down3.task.runnable
 
 import android.os.Environment
-import demo.xm.com.demo.down2.DownErrorType
-import demo.xm.com.demo.down2.log.BKLog
-import demo.xm.com.demo.down2.utils.CommonUtil
-import demo.xm.com.demo.down2.utils.FileUtil
-import demo.xm.com.demo.down2.utils.FileUtil.del
-import demo.xm.com.demo.down2.utils.FileUtil.getSizeUnit
-import demo.xm.com.demo.down2.utils.FileUtil.mergeFiles
+import demo.xm.com.demo.down3.enum_.DownErrorType
+import demo.xm.com.demo.down3.utils.BKLog
+
+import demo.xm.com.demo.down3.utils.CommonUtil
+import demo.xm.com.demo.down3.utils.FileUtil
+import demo.xm.com.demo.down3.utils.FileUtil.del
+import demo.xm.com.demo.down3.utils.FileUtil.getSizeUnit
+import demo.xm.com.demo.down3.utils.FileUtil.mergeFiles
 import java.io.File
 import java.io.RandomAccessFile
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ArrayBlockingQueue
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -34,7 +34,8 @@ class MultiRunnable : Runnable {
     private var exit = AtomicBoolean(false)
     var listener: MultiRunnable.OnListener? = null
     private var subThreadCompleteCount = 0
-    private var pool = ThreadPoolExecutor(threadNum, threadNum, 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
+    private var pool = ThreadPoolExecutor(threadNum, threadNum, 20, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
+    var name: String = ""
 
     override fun run() {
         exit.set(false) //应用退出标志，用来停止线程的
@@ -86,19 +87,23 @@ class MultiRunnable : Runnable {
             singleRunnable.raf = rafs[i]
             singleRunnable.rangeStartIndex = startIndex.toInt()
             singleRunnable.rangeEndIndex = endIndex
-            singleRunnable.process = startIndex
+            singleRunnable.process = files[i].length()
             singleRunnable.listener = object : SingleRunnable.OnListener {
+
                 override fun onProcess(singleRunnable: SingleRunnable, process: Long, total: Long, present: Float) {
-                    BKLog.i(TAG, "${singleRunnable.threadName} process$process total$total")
+                    BKLog.i(TAG, "${singleRunnable.threadName} process : $process total : $total")
                 }
 
                 override fun onComplete(singleRunnable: SingleRunnable, total: Long) {
-                    BKLog.d(TAG, "${singleRunnable.threadName} onComplete total${getSizeUnit(total)}")
+                    BKLog.d(TAG, "${singleRunnable.threadName} onComplete total:${getSizeUnit(total)}")
                     subThreadCompleteCount++
+                    if (subThreadCompleteCount == threadNum) {
+                        complete()
+                    }
                 }
 
                 override fun onError(singleRunnable: SingleRunnable, type: DownErrorType, s: String) {
-                    BKLog.d(TAG, "${singleRunnable.threadName} onError type$type msg$s")
+                    BKLog.d(TAG, "${singleRunnable.threadName} onError type:$type msg:$s")
                     listener?.onError(this@MultiRunnable, type, s)
                 }
             }
@@ -111,7 +116,7 @@ class MultiRunnable : Runnable {
         present()
 
         //4 下载完成
-        complete()
+        //complete()
     }
 
     private fun iniConn() {
@@ -120,38 +125,39 @@ class MultiRunnable : Runnable {
         conn.connectTimeout = 5000
         conn.readTimeout = 5000
         conn.doInput = true
+        conn.setRequestProperty("Accept-Encoding", "identity")
+        conn.connect()
         total = conn.contentLength
     }
 
     private fun present() {
         /*获取下载进度,单位百分比*/
-        var process = 0L
-        var runing = false
-        while (!runing) {
-            runing = true
+        var complete = false
+        while (!complete) {
+            Thread.sleep(1000)
+            var process = 0L
+            complete = true
             for (downRunnable in downRunnables) {
                 if (downRunnable.runing()) {
-                    runing = false
+                    complete = false
                 }
                 process += downRunnable.process
-                listener?.onProcess(this, process, total.toLong(), (process * 100 / total).toFloat())
             }
+            BKLog.d(TAG, "process:$process present:${(process * 100 / total).toFloat()}")
+            listener?.onProcess(this, process, total.toLong(), (process * 100 / total).toFloat())
         }
     }
 
     private fun complete() {
         /*完成下载*/
         if (!exit.get()) {
-            while (subThreadCompleteCount != threadNum) {
-                continue
-            }
+            exit()
             val path = Environment.getExternalStorageDirectory().absolutePath
             val outFile = FileUtil.createNewFile(path, "xmDown", CommonUtil.getFileName(url))
             val inFile = File(path + File.separator + "xmDown/${CommonUtil.getFileName(url)}Temp")
             mergeFiles(outFile, inFile)
             listener?.onComplete(this, total.toLong())
             del(inFile)
-            exit()
         }
     }
 

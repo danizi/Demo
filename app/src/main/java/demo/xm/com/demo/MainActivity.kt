@@ -20,12 +20,15 @@ import demo.xm.com.demo.down2.DownTasker
 import demo.xm.com.demo.down2.db.DownDBContract
 import demo.xm.com.demo.down2.event.DownObserver
 import demo.xm.com.demo.down2.log.BKLog
-import demo.xm.com.demo.down2.runnable.OnListener
+import demo.xm.com.demo.down2.runnable.MultiRunnable
 import demo.xm.com.demo.down2.runnable.SingleRunnable
-import demo.xm.com.demo.down2.utils.CommonUtil.md5
+import demo.xm.com.demo.down2.utils.CommonUtil
 import demo.xm.com.demo.down2.utils.FileUtil
 import demo.xm.com.demo.down2.utils.FileUtil.createNewFile
 import java.io.RandomAccessFile
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 
 /**
@@ -46,10 +49,11 @@ class MainActivity : AppCompatActivity(), DownObserver {
 //            "http://img5.imgtn.bdimg.com/it/u=4060543606,3642835235&fm=26&gp=0.jpg",
 //            "http://img1.imgtn.bdimg.com/it/u=2430510654,3359275973&fm=26&gp=0.jpg",
 //            "http://img0.imgtn.bdimg.com/it/u=3967239004,1951414302&fm=26&gp=0.jpg",
-            "https://cavedl.leiting.com/full/caveonline_M141859.apk",
-            "http://gyxz.ukdj3d.cn/vp/yx_sw1/warsong.apk",
-            "http://gyxz.ukdj3d.cn/vp1/yx_ljun1/Pokemmo.apk",
-            "http://gyxz.ukdj3d.cn/hk1/yx_xxm1/shanshuozhiguang.apk"
+//            "https://apk.apk.xgdown.com/down/1hd.apk",
+            "https://cavedl.leiting.com/full/caveonline_M141859.apk"
+//            "http://gyxz.ukdj3d.cn/vp/yx_sw1/warsong.apk",
+//            "http://gyxz.ukdj3d.cn/vp1/yx_ljun1/Pokemmo.apk",
+//            "http://gyxz.ukdj3d.cn/hk1/yx_xxm1/shanshuozhiguang.apk"
     )
     private var myAdapter: MyAdapter? = null
 
@@ -59,8 +63,6 @@ class MainActivity : AppCompatActivity(), DownObserver {
         findViews()
         iniData()
         initEvent()
-
-
     }
 
     var singleRunnable: SingleRunnable? = null
@@ -80,7 +82,6 @@ class MainActivity : AppCompatActivity(), DownObserver {
         rv?.adapter = myAdapter
         rv?.layoutManager = LinearLayoutManager(this)
         displayCache()
-
     }
 
     private fun displayCache() {
@@ -98,61 +99,97 @@ class MainActivity : AppCompatActivity(), DownObserver {
     }
 
     private fun test() {
-        val url = "https://download.tanwan.com/h5dgcqlczg/h5dgcqlczg_239277.apk"   //39.38MB
-        val path = Environment.getExternalStorageDirectory().absolutePath
-        val dir = "xmDown"
-        val fileName = "h5dgcqlczg_239277.apk"
-        val file = createNewFile(path, dir, fileName)
-        val startIndex = file.length()
-        val endIndex = -1
-        val raf = RandomAccessFile(file, "rwd")
-        raf.seek(0)
+        //val url = "https://apk.apk.xgdown.com/down/1hd.apk"   //39.38MB
+        val pool = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
+        for (url in downUrlArray) {
+            //val url = url   //39.38MB
+            val path = Environment.getExternalStorageDirectory().absolutePath
+            val dir = "xmDown"
+            val fileName = CommonUtil.getFileName(url)
+            val file = createNewFile(path, dir, fileName)
+            val startIndex = file.length()
+            val endIndex = -1
+            val raf = RandomAccessFile(file, "rwd")
+            raf.seek(startIndex)
+            BKLog.d(tag, "seek:$startIndex")
+            singleRunnable = SingleRunnable()
+            singleRunnable?.url = url
+            singleRunnable?.threadName = "singleRunnable"
+            singleRunnable?.raf = raf
+            singleRunnable?.downManager = downManager
+            singleRunnable?.rangeStartIndex = startIndex.toInt()
+            singleRunnable?.rangeEndIndex = endIndex
+            singleRunnable?.process = startIndex
+            singleRunnable?.listener = object : SingleRunnable.OnListener {
+                override fun onProcess(singleRunnable: SingleRunnable, process: Long, total: Long, present: Float) {
+                    BKLog.i(tag, "process$process total$total present$present")
+                }
 
-        singleRunnable = SingleRunnable()
-        singleRunnable?.url = url
-        singleRunnable?.raf = raf
-        singleRunnable?.downManager = downManager
-        singleRunnable?.rangeStartIndex = startIndex.toInt()
-        singleRunnable?.rangeEndIndex = endIndex
-        singleRunnable?.process = startIndex
-        singleRunnable?.listener = object : OnListener {
-            override fun onProcess(singleRunnable: SingleRunnable, process: Long, total: Long, present: Float) {
+                override fun onComplete(singleRunnable: SingleRunnable, total: Long) {
+                    //singleRunnable.exit()
+                    BKLog.d(tag, "${singleRunnable.url}onComplete")
+                }
 
+                override fun onError(singleRunnable: SingleRunnable, type: DownErrorType, s: String) {
+                    //singleRunnable.exit()
+                    BKLog.d(tag, "${singleRunnable.url}onError")
+                }
             }
-
-            override fun onComplete(singleRunnable: SingleRunnable, total: Long) {
-                singleRunnable.exit()
-            }
-
-            override fun onError(singleRunnable: SingleRunnable, type: DownErrorType, s: String) {
-                singleRunnable.exit()
-            }
+            //Thread(singleRunnable).start()
+            pool.submit(singleRunnable)
         }
-        Thread(singleRunnable).start()
+    }
+
+    private var multiRunnable: MultiRunnable? = null
+    private fun test2() {
+        val pool = ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
+        for (url in downUrlArray) {
+            multiRunnable = MultiRunnable()
+            multiRunnable?.url = url
+            multiRunnable?.threadNum = 3
+            multiRunnable?.threadName = "MultiRunnable"
+            multiRunnable?.listener = object : MultiRunnable.OnListener {
+                override fun onProcess(multiRunnable: MultiRunnable, process: Long, total: Long, present: Float) {
+                    BKLog.i(tag, "${multiRunnable.url}onProcess process$process total$total present$present")
+                }
+
+                override fun onComplete(multiRunnable: MultiRunnable, total: Long) {
+                    BKLog.d(tag, "${multiRunnable.url}onComplete total$total")
+                }
+
+                override fun onError(multiRunnable: MultiRunnable, type: DownErrorType, s: String) {
+                    BKLog.e(tag, "${multiRunnable.url}onError")
+                }
+            }
+            pool.submit(multiRunnable)
+//            Thread(multiRunnable).start()
+        }
     }
 
     private fun initEvent() {
         var count = 0
         btnAdd?.setOnClickListener {
+            //test()
+            test2()
             //创建的内容
-            if (count < downUrlArray.size) {
-                val downInfo = DownDBContract.DownInfo()
-                val url = downUrlArray[count]
-                downInfo.url = url
-                downInfo.uuid = md5(url)
-                downInfo.name = downUrlArray[count]
-                downInfo.progress = 0
-                downInfo.state = "点击开始"
-                downInfo.total = 0
-                downInfo.present = 0
-                //累加刷新
-                val posStart = myAdapter?.data?.size
-                val itemCount = 1
-                myAdapter?.data?.add(downInfo)
-                myAdapter?.notifyItemRangeChanged(posStart!!, itemCount)
-
-                count++
-            }
+//            if (count < downUrlArray.size) {
+//                val downInfo = DownDBContract.DownInfo()
+//                val url = downUrlArray[count]
+//                downInfo.url = url
+//                downInfo.uuid = md5(url)
+//                downInfo.name = downUrlArray[count]
+//                downInfo.progress = 0
+//                downInfo.state = "点击开始"
+//                downInfo.total = 0
+//                downInfo.present = 0
+//                //累加刷新
+//                val posStart = myAdapter?.data?.size
+//                val itemCount = 1
+//                myAdapter?.data?.add(downInfo)
+//                myAdapter?.notifyItemRangeChanged(posStart!!, itemCount)
+//
+//                count++
+//            }
         }
     }
 
@@ -161,6 +198,7 @@ class MainActivity : AppCompatActivity(), DownObserver {
         downManager?.dispatcher?.removeAll()
         downManager?.downObserverable?.removeObserver(this)
         singleRunnable?.exit()
+        multiRunnable?.exit()
     }
 
     override fun onProcess(tasker: DownTasker, process: Long, total: Long, present: Float) {

@@ -1,11 +1,11 @@
-package demo.xm.com.demo.down2.runnable
+package demo.xm.com.demo.down3.task.runnable
 
 import android.content.Context
-import demo.xm.com.demo.down2.DownErrorType
-import demo.xm.com.demo.down2.DownManager
-import demo.xm.com.demo.down2.log.BKLog
-import demo.xm.com.demo.down2.utils.FileUtil.getSizeUnit
-import demo.xm.com.demo.down2.utils.FileUtil.getUsableSpace
+import demo.xm.com.demo.down3.DownManager
+import demo.xm.com.demo.down3.enum_.DownErrorType
+import demo.xm.com.demo.down3.utils.BKLog
+import demo.xm.com.demo.down3.utils.FileUtil.getSizeUnit
+import demo.xm.com.demo.down3.utils.FileUtil.getUsableSpace
 import java.io.BufferedInputStream
 import java.io.InputStream
 import java.io.RandomAccessFile
@@ -75,9 +75,9 @@ open class SingleRunnable : Runnable {
 //                return
 //            }
 
-            if (callBackError(DownErrorType.NO_SPACE)) {
-                return
-            }
+//            if (callBackError(DownErrorType.NO_SPACE)) {
+//                return
+//            }
 
             runing(true)
             write(inputStream, raf)
@@ -96,8 +96,10 @@ open class SingleRunnable : Runnable {
         try {
             while (true) {
                 length = bis.read(buffer)
-                if (length == -1)
+                if (length == -1){
+                    BKLog.d(TAG,"")
                     return//读取完成
+                }
                 if (!runing.get())
                     return  //退出下载标志位
                 callBackProcess(length.toLong()) //进度回调
@@ -117,7 +119,6 @@ open class SingleRunnable : Runnable {
         this.process += length
         present = (100 * this.process / total).toFloat()
         listener?.onProcess(this, process, total, present)
-        //downManager?.downObserverable?.notifyObserverProcess(null, process, total, present)  //PS：当用退出下载线程的时候，文件缓存的位置与数据库登录的位置不一致，需要重新校验一次
     }
 
     private fun callBackComplete() {
@@ -164,7 +165,7 @@ open class SingleRunnable : Runnable {
         if (contentLength > getUsableSpace(context)) {
             BKLog.e(TAG, "空间不足，下载资源大小 ：${getSizeUnit(contentLength.toLong())} 可用资源大小 ：${getSizeUnit(getUsableSpace(context))}")
             //通知用户下载错误
-            downManager?.downObserverable?.notifyObserverError(null, DownErrorType.NO_SPACE)
+            downManager?.downObserverable()?.notifyObserverError(null, DownErrorType.NO_SPACE)
             exit()
             return true
         }
@@ -182,17 +183,6 @@ open class SingleRunnable : Runnable {
         } else {
             BKLog.d(TAG, "$threadName 停止下载线程")
             //处于停止下载状态
-            context = null
-            downManager = null
-            raf = null
-            context = null
-            downManager = null
-            process = DEFAULT.toLong()
-            total = DEFAULT.toLong()
-            present = DEFAULT.toFloat()
-            bufferSize = DEFAULT_BUFFER_SIZE
-            rangeStartIndex = DEFAULT
-            rangeEndIndex = DEFAULT
         }
     }
 

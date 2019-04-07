@@ -347,11 +347,12 @@ object FileUtil {
      * 文件合并
      */
     fun mergeFiles(outFile: File, inFile: File) {
-        val BUFSIZE = 1024 * 8
+        val BUFSIZE = 1024 * 4
         BKLog.d(TAG, "Merge " + inFile.absolutePath + "目录下的所有子文件，into " + "" + outFile.absolutePath)
         val outChannel = FileOutputStream(outFile).channel
         var fc: FileChannel? = null
         for (subFile in inFile.listFiles()) {  //获取inFile下的所有文件
+            BKLog.d(TAG, "Merge 文件顺序:${subFile.name}")
             val charset = Charset.forName("utf-8")
             val dCoder = charset.newDecoder()
             val eCoder = charset.newEncoder()
