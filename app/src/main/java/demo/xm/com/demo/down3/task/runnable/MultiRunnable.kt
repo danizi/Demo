@@ -137,14 +137,16 @@ class MultiRunnable : Runnable {
             Thread.sleep(1000)
             var process = 0L
             complete = true
-            for (downRunnable in downRunnables) {
-                if (downRunnable.runing()) {
-                    complete = false
+            if (subThreadCompleteCount != threadNum) {   //ps 延时的话可能出现状态问题，所以在这里再加一次判断
+                for (downRunnable in downRunnables) {
+                    if (downRunnable.runing()) {
+                        complete = false
+                    }
+                    process += downRunnable.process
                 }
-                process += downRunnable.process
+                BKLog.d(TAG, "process:$process present:${(process * 100 / total).toFloat()}")
+                listener?.onProcess(this, process, total.toLong(), (process * 100 / total).toFloat())
             }
-            BKLog.d(TAG, "process:$process present:${(process * 100 / total).toFloat()}")
-            listener?.onProcess(this, process, total.toLong(), (process * 100 / total).toFloat())
         }
     }
 

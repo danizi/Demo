@@ -43,13 +43,21 @@ class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     @SuppressLint("SetTextI18n")
     private fun display(task: DownTask) {
         mProgressBar?.max = 100
-        mProgressBar?.progress = task.present.toInt()
+        mProgressBar?.progress = if (mProgressBar?.progress!! < task.present.toInt()) {
+            task.present.toInt()
+        } else {
+            mProgressBar?.progress!!
+        }
         mTv_name?.text = task.name
+        mTv_down_des?.text = getSizeUnit(task.progress) + "/" + getSizeUnit(task.total)
         mTv_state?.text = when (task.state) {
             DownStateType.COMPLETE.ordinal -> {
+                mProgressBar?.progress = 100
+                mTv_down_des?.text = getSizeUnit(task.total) + "/" + getSizeUnit(task.total)
                 "完成"
             }
             DownStateType.NOT_STARTED.ordinal -> {
+                mTv_down_des?.text = "0M/0M"
                 "点击下载"
             }
             DownStateType.PAUSE.ordinal -> {
@@ -65,7 +73,7 @@ class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
                 "xxx"
             }
         }
-        mTv_down_des?.text = getSizeUnit(task.progress) + "/" + getSizeUnit(task.total)
+
     }
 
     private fun initEvent(downManager: DownManager?, task: DownTask) {
@@ -76,6 +84,7 @@ class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
                 downTask.url = task.url
                 downTask.uuid = task.uuid
                 downManager?.createDownTasker(downTask)?.enqueue()
+                mTv_state?.text = "加入下载队列"
             } else {
                 BKLog.d(TAG, "item 无法点击 因为状态是:${task.state}")
             }

@@ -12,6 +12,7 @@ import demo.xm.com.demo.down3.enum_.DownStateType
 import demo.xm.com.demo.down3.event.DownObserver
 import demo.xm.com.demo.down3.task.DownTask
 import demo.xm.com.demo.down3.task.DownTasker
+import demo.xm.com.demo.down3.utils.CommonUtil
 import demo.xm.com.demo.down3.utils.CommonUtil.md5
 
 class XmDownTest(var context: Context) {
@@ -79,6 +80,9 @@ class XmDownTest(var context: Context) {
         val task = DownTask()
         task.url = url
         task.uuid = md5(url)
+        task.name = CommonUtil.getFileName(url).replace(".apk", "")
+        task.progress = 0
+        task.present = 0
         addNotifyUI(task)
     }
 
@@ -95,12 +99,10 @@ class XmDownTest(var context: Context) {
             val tempTask = (downAdapter?.data!![i] as DownTask)
             if (tempTask.uuid == task.uuid) {
                 downAdapter?.data!![i] = task
-
                 //主线程上刷新
                 (context as Activity).runOnUiThread {
                     rv?.adapter?.notifyItemRangeChanged(i, 1)
                 }
-
             }
         }
     }
