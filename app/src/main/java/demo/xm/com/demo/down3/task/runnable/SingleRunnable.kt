@@ -130,7 +130,6 @@ open class SingleRunnable : Runnable {
         }
     }
 
-
     private fun callBackError(type: DownErrorType): Boolean {
         return when (type) {
             DownErrorType.NO_SPACE -> {
@@ -165,7 +164,7 @@ open class SingleRunnable : Runnable {
         if (contentLength > getUsableSpace(context)) {
             BKLog.e(TAG, "空间不足，下载资源大小 ：${getSizeUnit(contentLength.toLong())} 可用资源大小 ：${getSizeUnit(getUsableSpace(context))}")
             //通知用户下载错误
-            downManager?.downObserverable()?.notifyObserverError(null, DownErrorType.NO_SPACE)
+            downManager?.downObserverable()?.notifyObserverError(null, DownErrorType.NO_SPACE,"")
             exit()
             return true
         }

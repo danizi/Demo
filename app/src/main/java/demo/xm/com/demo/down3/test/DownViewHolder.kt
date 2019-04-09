@@ -45,13 +45,12 @@ class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     @SuppressLint("SetTextI18n")
     private fun display(task: DownTask) {
         mProgressBar?.max = 100
-        mProgressBar?.progress = if (mProgressBar?.progress!! < task.present.toInt()) {
+        mProgressBar?.progress = if (mProgressBar?.progress!! < task.progress.toInt()) {
             task.present.toInt()
         } else {
             mProgressBar?.progress!!
         }
         mTv_name?.text = task.name
-        mTv_down_des?.text = getSizeUnit(task.progress) + "/" + getSizeUnit(task.total)
         mTv_state?.text = when (task.state) {
             DownStateType.COMPLETE.ordinal -> {
                 mProgressBar?.progress = 100
@@ -75,7 +74,7 @@ class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
                 "xxx"
             }
         }
-
+        mTv_down_des?.text = getSizeUnit(task.progress) + "/" + getSizeUnit(task.total)
     }
 
     private fun initEvent(downManager: DownManager?, task: DownTask) {

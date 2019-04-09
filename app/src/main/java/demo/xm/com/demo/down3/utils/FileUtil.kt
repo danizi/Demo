@@ -65,7 +65,7 @@ object FileUtil {
         return -1
     }
 
-    fun getUsableSpace(context: Context?): Long {
+    fun getUsableSpace(context: Context? = null): Long {
         /*sd卡可用空间大小*/
         if (filePermission()) {
             return Environment.getExternalStorageDirectory().usableSpace

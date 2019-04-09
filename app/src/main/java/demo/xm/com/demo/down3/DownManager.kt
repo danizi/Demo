@@ -36,6 +36,7 @@ class DownManager {
         fun createDownManager(context: Context): DownManager {
             //初始化数据库
             val dao = DownDao(context, "XmDown", null, 100)
+//            val dao: DownDao? = null
 
             //初始化配置参数
             val config = DownConfig()
@@ -43,9 +44,9 @@ class DownManager {
             config.dir = "XmDown"
             config.threadNum = 3
             config.downTaskerPool = ThreadPoolExecutor(config.threadNum.toInt(), config.threadNum.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
-            config.isMultiRunnable = true
-            config.isSingleRunnable = false
-            config.runqueues = 2
+            config.isMultiRunnable = false
+            config.isSingleRunnable = true
+            config.runqueues = 5
             config.downDispatcherPool = ThreadPoolExecutor(config.runqueues.toInt(), config.runqueues.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
 
             //初始化分发器

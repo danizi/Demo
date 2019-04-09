@@ -28,21 +28,15 @@ class XmDownTest(var context: Context) {
         downManager = DownManager.createDownManager(context)
         downManager?.downObserverable()?.registerObserver(object : DownObserver {
             override fun onComplete(tasker: DownTasker, total: Long) {
-                BKLog.d(TAG, "onComplete ${tasker.task.name}")
                 notifyUI(tasker, DownStateType.COMPLETE, total)
             }
 
-            override fun onError(tasker: DownTasker, typeError: DownErrorType) {
-                BKLog.d(TAG, "onError ${tasker.task.name}")
-                notifyUI(tasker, DownStateType.ERROR, DownConfig.DEFAULT, typeError)
+            override fun onError(tasker: DownTasker, typeError: DownErrorType, s: String) {
+                notifyUI(tasker, DownStateType.ERROR, DownConfig.DEFAULT, typeError, s)
             }
 
             override fun onProcess(tasker: DownTasker, process: Long, total: Long, present: Float) {
-                BKLog.i(TAG, "*************************************")
-                BKLog.i(TAG, "onProcess ${tasker.task.name}")
-                BKLog.i(TAG, "process $process total$total present$present")
-                BKLog.i(TAG, " ")
-                notifyUI(tasker, DownStateType.RUNNING, total, null, process, present)
+                notifyUI(tasker, DownStateType.RUNNING, total, null, "", process, present)
             }
         })
         downAdapter = DownAdapter(downManager, ArrayList())
@@ -56,7 +50,7 @@ class XmDownTest(var context: Context) {
         rv?.layoutManager = LinearLayoutManager(context)
     }
 
-    fun notifyUI(tasker: DownTasker, stateType: DownStateType, total: Long, typeError: DownErrorType? = null, process: Long = 0L, present: Float = 0F) {
+    fun notifyUI(tasker: DownTasker, stateType: DownStateType, total: Long, typeError: DownErrorType? = null, s: String = "", process: Long = 0L, present: Float = 0F) {
         when (stateType) {
             DownStateType.COMPLETE -> {
                 notifyItem(tasker.task)

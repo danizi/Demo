@@ -40,7 +40,8 @@ class DownDispatcher {
                 pool?.execute(tasker.runnable)
                 runningQueue?.add(tasker)    //添加到运行队列
                 readyQueue?.remove(tasker)   //移除准备队列
-                BKLog.d(DownDispatcher.tag, "从readyQueue中取出${tasker?.task?.name}任务，添加到下载runningQueue")
+                //BKLog.d(DownDispatcher.tag, "从readyQueue中取出${tasker?.task?.name}任务，添加到下载runningQueue")
+                BKLog.d(DownDispatcher.tag, "从readyQueue中取出${tasker.runnable?.name}任务，添加到下载runningQueue")
             }
         }
     }

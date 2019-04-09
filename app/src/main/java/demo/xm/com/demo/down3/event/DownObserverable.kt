@@ -22,22 +22,19 @@ class DownObservable {
         queue?.remove(o)
     }
 
-    fun notifyObserver(type: Int, tasker: DownTasker? = null, typeError: DownErrorType? = null, process: Long = -1, total: Long = -1, present: Float = -1f) {
+    fun notifyObserver(type: Int, tasker: DownTasker? = null, typeError: DownErrorType? = null, s: String? = "", process: Long = -1, total: Long = -1, present: Float = -1f) {
         if (tasker == null) return
         for (downObserverable in queue!!) {
             when (type) {
                 0 -> {
-                    //BKLog.e(TAG, "notifyObserverComplete total $total")
                     downObserverable.onComplete(tasker, total)
                 }
                 1 -> {
                     if (typeError == null) return
-                    //BKLog.e(TAG, "notifyObserverError typeError $typeError")
-                    downObserverable.onError(tasker, typeError)
+                    downObserverable.onError(tasker, typeError, s!!)
                 }
                 2 -> {
                     if (process > 0 && total > 0 && present > 0) {
-                        //BKLog.i(TAG, "notifyObserverProcess process $process total $total present $present")
                         downObserverable.onProcess(tasker, process, total, present)
                     }
                 }
@@ -46,14 +43,14 @@ class DownObservable {
     }
 
     fun notifyObserverComplete(tasker: DownTasker?, total: Long) {
-        notifyObserver(0, tasker, null, -1, total)
+        notifyObserver(0, tasker, null, "", -1, total)
     }
 
-    fun notifyObserverError(tasker: DownTasker?, typeError: DownErrorType) {
-        notifyObserver(1, tasker, typeError)
+    fun notifyObserverError(tasker: DownTasker?, typeError: DownErrorType, s: String) {
+        notifyObserver(1, tasker, typeError, s)
     }
 
     fun notifyObserverProcess(tasker: DownTasker?, process: Long, total: Long, present: Float) {
-        notifyObserver(2, tasker, null, process, total, present)
+        notifyObserver(2, tasker, null, "", process, total, present)
     }
 }
