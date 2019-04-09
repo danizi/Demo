@@ -113,6 +113,7 @@ class DownTasker(private val downManager: DownManager, val task: DownTask) {
                     task.total = total
                     task.state = DownStateType.COMPLETE.ordinal
                     downManager.downObserverable()?.notifyObserverComplete(this@DownTasker, total) //通知观察者下载完成
+                    downManager.downDispatcher()?.finish(this@DownTasker)
                     BKLog.d(TAG, "${singleRunnable.url}onComplete")
                 }
 

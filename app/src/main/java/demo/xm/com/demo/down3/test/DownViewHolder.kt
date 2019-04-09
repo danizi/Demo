@@ -3,24 +3,17 @@ package demo.xm.com.demo.down3.test
 import android.Manifest
 import android.annotation.SuppressLint
 import android.support.v7.widget.RecyclerView
+import android.util.Log
 import android.view.View
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import demo.xm.com.demo.R
-import demo.xm.com.demo.down.DownCall
 import demo.xm.com.demo.down3.DownManager
 import demo.xm.com.demo.down3.enum_.DownStateType
 import demo.xm.com.demo.down3.task.DownTask
 import demo.xm.com.demo.down3.utils.BKLog
 import demo.xm.com.demo.down3.utils.FileUtil.getSizeUnit
-import rx.functions.Action1
-import android.Manifest.permission
-import android.Manifest.permission.READ_CALL_LOG
-import android.Manifest.permission.RECEIVE_MMS
-import android.util.Log
-import demo.xm.com.demo.MainActivity
-import com.tbruyelle.rxpermissions.RxPermissions
 
 
 class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -89,7 +82,7 @@ class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
         itemView.setOnClickListener {
 
-            RxPermissions.getInstance(itemView.context)
+            com.tbruyelle.rxpermissions.RxPermissions.getInstance(itemView.context)
                     .request(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     .subscribe { aBoolean ->
                         if (aBoolean!!) {

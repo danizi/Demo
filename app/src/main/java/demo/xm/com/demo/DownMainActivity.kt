@@ -24,8 +24,11 @@ class DownMainActivity : AppCompatActivity() {
             "http://img5.imgtn.bdimg.com/it/u=4060543606,3642835235&fm=26&gp=0.jpg",
             "http://img0.imgtn.bdimg.com/it/u=3282593745,642847689&fm=26&gp=0.jpg",
             "https://apk.apk.xgdown.com/down/1hd.apk",
-            "https://dl.hz.37.com.cn/upload/1_1002822_10664/shikongzhiyiH5_10664.apk"
-
+            "https://dl.hz.37.com.cn/upload/1_1002822_10664/shikongzhiyiH5_10664.apk",
+            "https://cavedl.leiting.com/full/caveonline_M141859.apk",
+            "http://gyxz.ukdj3d.cn/vp/yx_sw1/warsong.apk",
+            "http://gyxz.ukdj3d.cn/vp1/yx_ljun1/Pokemmo.apk",
+            "http://gyxz.ukdj3d.cn/hk1/yx_xxm1/shanshuozhiguang.apk"
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
