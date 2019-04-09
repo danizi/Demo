@@ -1,7 +1,5 @@
 package demo.xm.com.demo.down2.db
 
-import demo.xm.com.demo.down2.DownTask
-
 /**
  * 数据库契约类
  */
@@ -13,7 +11,7 @@ class DownDBContract {
         private const val TABLE_NAME = "down"             //表名称
         private const val _ID = "_id"                     //主键ID
         private const val COLUMN_UUID = "uuid"            //下载名称
-        private const val COLUMN_URL = "url"            //下载名称
+        private const val COLUMN_URL = "url"              //下载名称
         private const val COLUMN_NAME = "name"            //下载名称
         private const val COLUMN_PRESENT = "present"      //下载百分比(单位 1/100)
         private const val COLUMN_TOTAL = "total"          //下载总大小(单位：字节)

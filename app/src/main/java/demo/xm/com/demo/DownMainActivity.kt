@@ -1,10 +1,16 @@
 package demo.xm.com.demo
 
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Environment
+import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.RecyclerView
+import android.util.Log
 import android.widget.Button
+import demo.xm.com.demo.R.id.rv
 import demo.xm.com.demo.down3.test.XmDownTest
+import java.io.File
 
 class DownMainActivity : AppCompatActivity() {
 
@@ -38,8 +44,25 @@ class DownMainActivity : AppCompatActivity() {
 
     private fun iniData() {
         xmDownTest = XmDownTest(this)
+//        ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.WRITE_EXTERNAL_STORAGE), 1)
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            1 -> {
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    //创建文件夹
+                    if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+                        val file = File("" + Environment.getExternalStorageDirectory() + "/test/")
+                        if (!file.exists()) {
+                            Log.d("result", "create result:" + file.mkdirs())
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     private fun initEvent() {
         btnAdd?.setOnClickListener {

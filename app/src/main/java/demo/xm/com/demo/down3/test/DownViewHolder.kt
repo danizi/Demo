@@ -1,5 +1,6 @@
 package demo.xm.com.demo.down3.test
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.support.v7.widget.RecyclerView
 import android.view.View
@@ -13,6 +14,14 @@ import demo.xm.com.demo.down3.enum_.DownStateType
 import demo.xm.com.demo.down3.task.DownTask
 import demo.xm.com.demo.down3.utils.BKLog
 import demo.xm.com.demo.down3.utils.FileUtil.getSizeUnit
+import rx.functions.Action1
+import android.Manifest.permission
+import android.Manifest.permission.READ_CALL_LOG
+import android.Manifest.permission.RECEIVE_MMS
+import android.util.Log
+import demo.xm.com.demo.MainActivity
+import com.tbruyelle.rxpermissions.RxPermissions
+
 
 class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
 
@@ -79,15 +88,28 @@ class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     private fun initEvent(downManager: DownManager?, task: DownTask) {
 
         itemView.setOnClickListener {
-            if (task.state == DownStateType.NOT_STARTED.ordinal || task.state == DownStateType.PAUSE.ordinal) {
-                val downTask = DownTask()
-                downTask.url = task.url
-                downTask.uuid = task.uuid
-                downManager?.createDownTasker(downTask)?.enqueue()
-                mTv_state?.text = "加入下载队列"
-            } else {
-                BKLog.d(TAG, "item 无法点击 因为状态是:${task.state}")
-            }
+
+            RxPermissions.getInstance(itemView.context)
+                    .request(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    .subscribe { aBoolean ->
+                        if (aBoolean!!) {
+                            //当所有权限都允许之后，返回true
+                            Log.i("permissions", "btn_more_sametime：$aBoolean")
+                            if (task.state == DownStateType.NOT_STARTED.ordinal || task.state == DownStateType.PAUSE.ordinal) {
+                                val downTask = DownTask()
+                                downTask.url = task.url
+                                downTask.uuid = task.uuid
+                                downManager?.createDownTasker(downTask)?.enqueue()
+                                mTv_state?.text = "加入下载队列"
+                            } else {
+                                BKLog.d(TAG, "item 无法点击 因为状态是:${task.state}")
+                            }
+                        } else {
+                            //只要有一个权限禁止，返回false，
+                            //下一次申请只申请没通过申请的权限
+                            Log.i("permissions", "btn_more_sametime：$aBoolean")
+                        }
+                    }
         }
     }
 }
