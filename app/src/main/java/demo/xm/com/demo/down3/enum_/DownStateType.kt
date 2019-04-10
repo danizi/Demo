@@ -6,5 +6,6 @@ enum class DownStateType {
     PAUSE,//暂停
     START,//开始
     COMPLETE,//完成状态
-    ERROR//下载错误
+    ERROR,//下载错误
+    DELETE//任务删除
 }

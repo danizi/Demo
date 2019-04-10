@@ -44,8 +44,8 @@ class DownManager {
             config.dir = "XmDown"
             config.threadNum = 2
             config.downTaskerPool = ThreadPoolExecutor(config.threadNum.toInt(), config.threadNum.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
-            config.isMultiRunnable = true
-            config.isSingleRunnable = false
+            config.isMultiRunnable = false
+            config.isSingleRunnable = true
             config.runqueues = 2
             config.downDispatcherPool = ThreadPoolExecutor(config.runqueues.toInt(), config.runqueues.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
 
@@ -83,9 +83,12 @@ class DownManager {
     fun pause(task: DownTask) {
         /*暂停下载任务*/
         if (downTaskers?.isNotEmpty()!!) {
-            for (tasker in downTaskers!!) {
+            val iterator = downTaskers?.iterator()
+            while (iterator?.hasNext()!!) {
+                val tasker = iterator.next()
                 if (tasker.task == task) {
                     tasker.pause()
+                    iterator.remove()
                 }
             }
         }

@@ -30,18 +30,17 @@ class MultiRunnable2 : BaseRunnable() {
     private var subThreadCompleteCount = 0 //下载线程完成集合数量
     private var downRunnables: ArrayList<SingleRunnable2> = ArrayList() //线程集合
 
-    init {
-        pool = ThreadPoolExecutor(2, 2, 20, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //线程池
-    }
-
     override fun down() {
         /*执行下载操作*/
+        if (pool == null) {
+            pool = ThreadPoolExecutor(threadNum, threadNum, 20, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //线程池
+        }
         //1 获取资源的大小
         val conn = iniConn()
         total = conn.contentLength.toLong()
 
         val lump = total / threadNum
-        BKLog.d(TAG, "分成$threadNum lump -> $lump B ${getSizeUnit(lump.toLong())}M，总大小${getSizeUnit(total.toLong())} M $total B")
+        BKLog.d(TAG, "分成${threadNum}块 total:${total}B lump:${lump}B  块大小:${getSizeUnit(lump)} 总大小:${getSizeUnit(total)} ")
         //2 分配子线程数量,并开始下载
 
         //创建临时文件夹与文件
@@ -98,7 +97,7 @@ class MultiRunnable2 : BaseRunnable() {
                 }
 
                 private fun callbackProcess(singleRunnable: BaseRunnable, process: Long, total: Long, present: Float) {
-                    //Thread.sleep(1000)
+//                    Thread.sleep(1000)
                     this@MultiRunnable2.process = 0
                     for (downRunnable in downRunnables) {
                         this@MultiRunnable2.process += downRunnable.process
@@ -109,6 +108,7 @@ class MultiRunnable2 : BaseRunnable() {
                 }
 
                 private fun callbackComplete(singleRunnable: BaseRunnable, total: Long) {
+                    BKLog.d(TAG, "${singleRunnable.threadName} onComplete total:$total")
                     subThreadCompleteCount++
                     if (subThreadCompleteCount == threadNum) {
                         runing(false)

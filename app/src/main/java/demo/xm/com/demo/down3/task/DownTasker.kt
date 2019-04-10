@@ -69,14 +69,14 @@ class DownTasker(private val downManager: DownManager, val task: DownTask) {
                 task.state = DownStateType.COMPLETE.ordinal
                 downManager.downObserverable()?.notifyObserverComplete(this@DownTasker, total) //通知“观察者”下载完成
                 downManager.downDispatcher()?.finish(this@DownTasker) //通知“分发器”下载完成
-                BKLog.d(TAG, "${multiRunnable.name} onComplete total$total")
+                BKLog.d(TAG, "taskName:${multiRunnable.name} onComplete total:$total")
             }
 
             override fun onError(multiRunnable: BaseRunnable, type: DownErrorType, s: String) {
                 task.state = DownStateType.ERROR.ordinal
                 downManager.downObserverable()?.notifyObserverError(this@DownTasker, type, s)//通知观察者下载错误
                 downManager.downDispatcher()?.finish(this@DownTasker) //通知“分发器”下载错误
-                BKLog.e(TAG, "${multiRunnable.name} onError $s")
+                BKLog.e(TAG, "taskName:${multiRunnable.name} onError error:$s")
             }
         }
         return if (downManager.downConfig()?.isMultiRunnable == true) {
@@ -112,14 +112,12 @@ class DownTasker(private val downManager: DownManager, val task: DownTask) {
             singleRunnable.process = startIndex
             singleRunnable.present = task.present.toFloat()
 
-            //singleRunnable.url = task.url
             singleRunnable.threadName = "SingleRunnable"
             singleRunnable.raf = raf
             singleRunnable.name = task.name
             singleRunnable.rangeStartIndex = startIndex
             singleRunnable.rangeEndIndex = endIndex.toLong()
             singleRunnable.process = startIndex
-            //singleRunnable.total = task.total
             singleRunnable.listener = listener
             singleRunnable
         }
@@ -140,11 +138,14 @@ class DownTasker(private val downManager: DownManager, val task: DownTask) {
             task.state = DownStateType.PAUSE.ordinal       //更改状态
         }
         downManager.downDao()?.update(task) //任务更新数据库
+        downManager.downObserverable()?.notifyObserverPause(this) //任务暂停
     }
 
     fun delete() {
         /*删除任务*/
         pause()
         downManager.downDao()?.delete(task) //从数据库中移除
+        //删除本地文件
+        downManager.downObserverable()?.notifyObserverDelete(this) //任务删除
     }
 }

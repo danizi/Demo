@@ -38,6 +38,12 @@ class DownObservable {
                         downObserverable.onProcess(tasker, process, total, present)
                     }
                 }
+                3 -> {
+                    downObserverable.onPause(tasker)
+                }
+                4 -> {
+                    downObserverable.onDelete(tasker)
+                }
             }
         }
     }
@@ -52,5 +58,13 @@ class DownObservable {
 
     fun notifyObserverProcess(tasker: DownTasker?, process: Long, total: Long, present: Float) {
         notifyObserver(2, tasker, null, "", process, total, present)
+    }
+
+    fun notifyObserverPause(tasker: DownTasker?) {
+        notifyObserver(3, tasker)
+    }
+
+    fun notifyObserverDelete(tasker: DownTasker?) {
+        notifyObserver(4, tasker)
     }
 }

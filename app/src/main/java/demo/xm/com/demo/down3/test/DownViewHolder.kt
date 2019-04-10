@@ -2,7 +2,6 @@ package demo.xm.com.demo.down3.test
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import android.support.v7.widget.RecyclerView
@@ -49,17 +48,10 @@ class DownViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     @SuppressLint("SetTextI18n")
     private fun display(task: DownTask) {
         mProgressBar?.max = 100
-//        mProgressBar?.progress = if (mProgressBar?.progress!! < task.progress.toInt()) {
-//            task.present.toInt()
-//        } else {
-//            mProgressBar?.progress!!
-//        }
         mProgressBar?.progress = task.present.toInt()
         mTv_name?.text = task.name
         mTv_state?.text = when (task.state) {
             DownStateType.COMPLETE.ordinal -> {
-//                mProgressBar?.progress = 100
-//                mTv_down_des?.text = getSizeUnit(task.total) + "/" + getSizeUnit(task.total)
                 "完成"
             }
             DownStateType.NOT_STARTED.ordinal -> {

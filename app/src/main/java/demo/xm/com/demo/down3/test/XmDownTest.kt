@@ -26,6 +26,14 @@ class XmDownTest(var context: Context) {
     init {
         downManager = DownManager.createDownManager(context)
         downManager?.downObserverable()?.registerObserver(object : DownObserver {
+            override fun onPause(tasker: DownTasker) {
+                notifyUI(tasker, DownStateType.PAUSE)
+            }
+
+            override fun onDelete(tasker: DownTasker) {
+                notifyUI(tasker, DownStateType.DELETE)
+            }
+
             override fun onComplete(tasker: DownTasker, total: Long) {
                 notifyUI(tasker, DownStateType.COMPLETE, total)
             }
@@ -49,7 +57,7 @@ class XmDownTest(var context: Context) {
         rv?.layoutManager = LinearLayoutManager(context)
     }
 
-    fun notifyUI(tasker: DownTasker, stateType: DownStateType, total: Long, typeError: DownErrorType? = null, s: String = "", process: Long = 0L, present: Float = 0F) {
+    fun notifyUI(tasker: DownTasker, stateType: DownStateType, total: Long = 0, typeError: DownErrorType? = null, s: String = "", process: Long = 0L, present: Float = 0F) {
         when (stateType) {
             DownStateType.COMPLETE -> {
                 notifyItem(tasker.task)
@@ -60,7 +68,26 @@ class XmDownTest(var context: Context) {
             DownStateType.RUNNING -> {
                 notifyItem(tasker.task)
             }
+            DownStateType.PAUSE -> {
+                notifyItem(tasker.task)
+            }
+            DownStateType.DELETE -> {
+                notifyItem(tasker.task)
+            }
             else -> {
+            }
+        }
+    }
+
+    private fun notifyItem(task: DownTask) {
+        for (i in 0..(downAdapter?.data?.size!! - 1)) {
+            val tempTask = (downAdapter?.data!![i] as DownTask)
+            if (tempTask.uuid == task.uuid) {
+                downAdapter?.data!![i] = task
+                //主线程上刷新
+                (context as Activity).runOnUiThread {
+                    rv?.adapter?.notifyItemRangeChanged(i, 1)
+                }
             }
         }
     }
@@ -85,19 +112,6 @@ class XmDownTest(var context: Context) {
         val itemCount = 1
         downAdapter?.data?.add(task)
         rv?.adapter?.notifyItemRangeChanged(positionStart, itemCount)
-    }
-
-    private fun notifyItem(task: DownTask) {
-        for (i in 0..(downAdapter?.data?.size!! - 1)) {
-            val tempTask = (downAdapter?.data!![i] as DownTask)
-            if (tempTask.uuid == task.uuid) {
-                downAdapter?.data!![i] = task
-                //主线程上刷新
-                (context as Activity).runOnUiThread {
-                    rv?.adapter?.notifyItemRangeChanged(i, 1)
-                }
-            }
-        }
     }
 
 

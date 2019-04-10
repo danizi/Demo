@@ -92,7 +92,7 @@ open class SingleRunnable2 : BaseRunnable() {
 
     private fun callBackComplete() {
         /*完成回调给观察者*/
-        if (runing.get() && process == total) {
+        if (runing.get() /*&& process == total */) { //todo ps:暂停-重新下载process不对后续需要修改，但不影响使用。
             listener?.onComplete(this, total)
             runing.set(false)
         }
