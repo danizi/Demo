@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
-import demo.xm.com.demo.down2.log.BKLog
 import demo.xm.com.demo.down3.DownManager
 import demo.xm.com.demo.down3.config.DownConfig
 import demo.xm.com.demo.down3.enum_.DownErrorType

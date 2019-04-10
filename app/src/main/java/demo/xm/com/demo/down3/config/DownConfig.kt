@@ -4,7 +4,7 @@ import java.util.concurrent.ExecutorService
 
 class DownConfig {
     companion object {
-        const val DEFAULT = -1L
+        const val DEFAULT = 0L
         const val EMPTY_STRING = ""
     }
     var path = EMPTY_STRING

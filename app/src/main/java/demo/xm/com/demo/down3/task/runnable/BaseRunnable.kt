@@ -1,8 +1,10 @@
 package demo.xm.com.demo.down3.task.runnable
 
+
+import demo.xm.com.demo.down3.config.DownConfig.Companion.DEFAULT
+import demo.xm.com.demo.down3.config.DownConfig.Companion.EMPTY_STRING
 import demo.xm.com.demo.down3.enum_.DownErrorType
-import demo.xm.com.demo.down3.task.runnable.SingleRunnable.Companion.DEFAULT
-import demo.xm.com.demo.down3.task.runnable.SingleRunnable.Companion.DEFAULT_EMPTY
+
 import demo.xm.com.demo.down3.utils.BKLog
 import java.io.RandomAccessFile
 import java.net.HttpURLConnection
@@ -14,7 +16,7 @@ abstract class BaseRunnable : Runnable {
      * 共用属性
      */
     var runing = AtomicBoolean(false) //运行状态
-    var threadName = DEFAULT_EMPTY  //线程名称
+    var threadName = EMPTY_STRING  //线程名称
     var process: Long = DEFAULT.toLong() // 下载进度（单位 B）
     var total: Long = DEFAULT.toLong() //下载文件总大小（单位 B）
     var present: Float = DEFAULT.toFloat() //下载进度(单位 %)
@@ -23,10 +25,10 @@ abstract class BaseRunnable : Runnable {
     /**
      * 多线程会使用到的属性
      */
-    var url = DEFAULT_EMPTY  //下载地址
-    var name = DEFAULT_EMPTY //下载名称
-    var path = DEFAULT_EMPTY //下载根目录
-    var dir = DEFAULT_EMPTY //下载目录
+    var url = EMPTY_STRING  //下载地址
+    var name = EMPTY_STRING //下载名称
+    var path = EMPTY_STRING //下载根目录
+    var dir = EMPTY_STRING //下载目录
 
     /**
      * 单线程会使用到的属性
@@ -49,8 +51,8 @@ abstract class BaseRunnable : Runnable {
     fun iniConn(): HttpURLConnection {
         val conn = URL(url).openConnection() as HttpURLConnection
         conn.requestMethod = "GET"
-        conn.connectTimeout = 5000
-        conn.readTimeout = 5000
+        conn.connectTimeout = 10000
+        conn.readTimeout = 10000
         conn.doInput = true
         conn.setRequestProperty("Accept-Encoding", "identity")
         return conn
@@ -62,7 +64,7 @@ abstract class BaseRunnable : Runnable {
     fun runing(flag: Boolean) {
         runing.set(flag)
         if (!flag) {
-            BKLog.d(SingleRunnable.TAG, "$threadName 停止下载线程")
+            BKLog.d("BaseRunnable", "$threadName 停止下载线程")
         }
     }
 

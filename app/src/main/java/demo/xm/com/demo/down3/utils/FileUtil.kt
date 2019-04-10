@@ -3,10 +3,9 @@ package demo.xm.com.demo.down3.utils
 import android.content.Context
 import android.os.Environment
 import android.text.TextUtils
-import demo.xm.com.demo.down2.log.BKLog
-import demo.xm.com.demo.down3.utils.CommonUtil.getSize
-import java.io.*
-import java.net.HttpURLConnection
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.charset.Charset

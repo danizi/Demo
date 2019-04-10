@@ -35,18 +35,18 @@ class DownManager {
 
         fun createDownManager(context: Context): DownManager {
             //初始化数据库
-            val dao = DownDao(context, "XmDown", null, 100)
-//            val dao: DownDao? = null
+//            val dao = DownDao(context, "XmDown", null, 100)
+            val dao: DownDao? = null
 
             //初始化配置参数
             val config = DownConfig()
             config.path = Environment.getExternalStorageDirectory().absolutePath
             config.dir = "XmDown"
-            config.threadNum = 3
+            config.threadNum = 2
             config.downTaskerPool = ThreadPoolExecutor(config.threadNum.toInt(), config.threadNum.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
-            config.isMultiRunnable = false
-            config.isSingleRunnable = true
-            config.runqueues = 5
+            config.isMultiRunnable = true
+            config.isSingleRunnable = false
+            config.runqueues = 2
             config.downDispatcherPool = ThreadPoolExecutor(config.runqueues.toInt(), config.runqueues.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
 
             //初始化分发器
@@ -72,9 +72,21 @@ class DownManager {
     }
 
     fun pauseAllDownTasker() {
+        /*暂停所有下载任务*/
         if (downTaskers?.isNotEmpty()!!) {
             for (tasker in downTaskers!!) {
                 tasker.pause()
+            }
+        }
+    }
+
+    fun pause(task: DownTask) {
+        /*暂停下载任务*/
+        if (downTaskers?.isNotEmpty()!!) {
+            for (tasker in downTaskers!!) {
+                if (tasker.task == task) {
+                    tasker.pause()
+                }
             }
         }
     }
@@ -94,4 +106,6 @@ class DownManager {
     fun downObserverable(): DownObservable? {
         return downObserverable
     }
+
+
 }

@@ -13,7 +13,7 @@ class DownTask {
     var fileName = EMPTY_STRING
     var state = DownStateType.NOT_STARTED.ordinal
 
-    //存储到数据所用字段
+    //存储到数据库所用字段
     var progress = DEFAULT
     var total = DEFAULT
     var present = DEFAULT

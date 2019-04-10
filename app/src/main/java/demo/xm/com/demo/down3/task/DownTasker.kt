@@ -37,9 +37,15 @@ class DownTasker(private val downManager: DownManager, val task: DownTask) {
             task.fileName = getFileName(task.url)
         }
         task.state = DownStateType.NOT_STARTED.ordinal
-        task.progress = DEFAULT
-        task.total = DEFAULT
-        task.present = DEFAULT
+        if (task.progress < 0) {
+            task.progress = DEFAULT
+        }
+        if (task.total < 0) {
+            task.total = DEFAULT
+        }
+        if (task.present < 0) {
+            task.present = DEFAULT
+        }
         task.path = downManager.downConfig()?.path!!
         task.dir = downManager.downConfig()?.dir!!
         task.absolutePath = task.path + File.separator + task.dir + File.separator + task.fileName
@@ -54,30 +60,36 @@ class DownTasker(private val downManager: DownManager, val task: DownTask) {
                 task.total = total
                 task.present = present.toLong()
                 task.state = DownStateType.RUNNING.ordinal
-                downManager.downObserverable()?.notifyObserverProcess(this@DownTasker, process, total, present) //通知观察者进度
-                BKLog.d(MultiRunnable2.TAG, "taskName:${multiRunnable.name} process:$process present:${(process * 100 / total).toFloat()}")
+                downManager.downObserverable()?.notifyObserverProcess(this@DownTasker, process, total, present) //通知“观察者”下载进度
+                BKLog.i(MultiRunnable2.TAG, "taskName:${multiRunnable.name} process:$process present:${(process * 100 / total).toFloat()}")
             }
 
             override fun onComplete(multiRunnable: BaseRunnable, total: Long) {
                 task.total = total
                 task.state = DownStateType.COMPLETE.ordinal
-                downManager.downObserverable()?.notifyObserverComplete(this@DownTasker, total) //通知观察者下载完成
-                downManager.downDispatcher()?.finish(this@DownTasker)
+                downManager.downObserverable()?.notifyObserverComplete(this@DownTasker, total) //通知“观察者”下载完成
+                downManager.downDispatcher()?.finish(this@DownTasker) //通知“分发器”下载完成
                 BKLog.d(TAG, "${multiRunnable.name} onComplete total$total")
             }
 
             override fun onError(multiRunnable: BaseRunnable, type: DownErrorType, s: String) {
                 task.state = DownStateType.ERROR.ordinal
                 downManager.downObserverable()?.notifyObserverError(this@DownTasker, type, s)//通知观察者下载错误
+                downManager.downDispatcher()?.finish(this@DownTasker) //通知“分发器”下载错误
                 BKLog.e(TAG, "${multiRunnable.name} onError $s")
             }
         }
         return if (downManager.downConfig()?.isMultiRunnable == true) {
             val multiRunnable = MultiRunnable2()
-            multiRunnable.url = task.url
+
             multiRunnable.name = task.name
-            multiRunnable.threadNum = 3
+            multiRunnable.url = task.url
+            multiRunnable.total = task.total
+            multiRunnable.process = task.progress
+            multiRunnable.present = task.present.toFloat()
+
             multiRunnable.threadName = "MultiRunnable2"
+            multiRunnable.threadNum = downManager.downConfig()?.threadNum?.toInt()!!
             multiRunnable.dir = downManager.downConfig()?.dir!!
             multiRunnable.path = downManager.downConfig()?.path!!
             multiRunnable.listener = listener
@@ -92,14 +104,22 @@ class DownTasker(private val downManager: DownManager, val task: DownTask) {
             val raf = RandomAccessFile(file, "rwd")
             raf.seek(startIndex)
             BKLog.d(TAG, "seek:$startIndex")
+
             val singleRunnable = SingleRunnable2()
+            singleRunnable.name = task.name
             singleRunnable.url = task.url
+            singleRunnable.total = task.total
+            singleRunnable.process = startIndex
+            singleRunnable.present = task.present.toFloat()
+
+            //singleRunnable.url = task.url
             singleRunnable.threadName = "SingleRunnable"
             singleRunnable.raf = raf
             singleRunnable.name = task.name
             singleRunnable.rangeStartIndex = startIndex
             singleRunnable.rangeEndIndex = endIndex.toLong()
             singleRunnable.process = startIndex
+            //singleRunnable.total = task.total
             singleRunnable.listener = listener
             singleRunnable
         }
@@ -117,6 +137,7 @@ class DownTasker(private val downManager: DownManager, val task: DownTask) {
         downManager.downDispatcher()?.remove(this)//下载分发器队列中移除该任务
         if (task.state == DownStateType.RUNNING.ordinal) {
             task.state = DownStateType.NOT_STARTED.ordinal //更改状态
+            task.state = DownStateType.PAUSE.ordinal       //更改状态
         }
         downManager.downDao()?.update(task) //任务更新数据库
     }

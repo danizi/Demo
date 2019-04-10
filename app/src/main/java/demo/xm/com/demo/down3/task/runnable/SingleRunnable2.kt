@@ -16,7 +16,6 @@ open class SingleRunnable2 : BaseRunnable() {
 
     companion object {
         const val TAG = "SingleRunnable"
-        //const val DEFAULT = -1 //数字默认值
         const val DEFAULT_BUFFER_SIZE = 1024 * 4 //文件写入的缓存字节大小
     }
 
@@ -37,7 +36,9 @@ open class SingleRunnable2 : BaseRunnable() {
             }
             conn.setRequestProperty("Range", value)
             val inputStream = conn.inputStream
-            total = conn.contentLength.toLong()
+            if (total < conn.contentLength.toLong()) {
+                total = conn.contentLength.toLong()
+            }
 
             if (total > getUsableSpace()) {
                 listener?.onError(this, DownErrorType.NO_SPACE, "空间不足，下载资源大小 ：${getSizeUnit(total)} 可用资源大小 ：${getSizeUnit(getUsableSpace())}")
@@ -63,11 +64,13 @@ open class SingleRunnable2 : BaseRunnable() {
             while (true) {
                 length = bis.read(buffer)
                 if (length == -1) {
-                    BKLog.d(TAG, "")
-                    return//读取完成
+                    BKLog.d(TAG, "读取完成。")
+                    return
                 }
-                if (!runing.get())
-                    return  //退出下载标志位
+                if (!runing.get()) {
+                    BKLog.d(TAG, "外部修改了运行标志位，停止文件写入。")
+                    return
+                }
                 callBackProcess(length.toLong()) //进度回调
                 raf?.write(buffer, 0, length)   //写入文件中
             }
@@ -89,7 +92,7 @@ open class SingleRunnable2 : BaseRunnable() {
 
     private fun callBackComplete() {
         /*完成回调给观察者*/
-        if (runing.get()) {
+        if (runing.get() && process == total) {
             listener?.onComplete(this, total)
             runing.set(false)
         }

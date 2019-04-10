@@ -3,7 +3,6 @@ package demo.xm.com.demo.down3.task.runnable
 import android.os.Environment
 import demo.xm.com.demo.down3.enum_.DownErrorType
 import demo.xm.com.demo.down3.utils.BKLog
-
 import demo.xm.com.demo.down3.utils.CommonUtil
 import demo.xm.com.demo.down3.utils.CommonUtil.getFileName
 import demo.xm.com.demo.down3.utils.FileUtil
@@ -12,12 +11,10 @@ import demo.xm.com.demo.down3.utils.FileUtil.getSizeUnit
 import demo.xm.com.demo.down3.utils.FileUtil.mergeFiles
 import java.io.File
 import java.io.RandomAccessFile
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * 任务多个线程下载（分段）
@@ -28,13 +25,13 @@ class MultiRunnable2 : BaseRunnable() {
         const val TAG = "MultiRunnable2"
     }
 
-    var threadNum = 3   //限定线程数量
-    private var pool = ThreadPoolExecutor(threadNum, threadNum, 20, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //线程池
+    var threadNum = 0   //限定线程数量
+    private var pool: ExecutorService? = null
     private var subThreadCompleteCount = 0 //下载线程完成集合数量
-    private var downRunnables: ArrayList<SingleRunnable> = ArrayList() //线程集合
+    private var downRunnables: ArrayList<SingleRunnable2> = ArrayList() //线程集合
 
     init {
-
+        pool = ThreadPoolExecutor(2, 2, 20, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //线程池
     }
 
     override fun down() {
@@ -76,37 +73,42 @@ class MultiRunnable2 : BaseRunnable() {
                 lump * (i + 1) - 1
             }
 
-            val singleRunnable = SingleRunnable()
+            val singleRunnable = SingleRunnable2()
             singleRunnable.url = url
             singleRunnable.threadName = "$name MultiRunnable_SingleRunnable_$i"
             singleRunnable.raf = rafs[i]
-            singleRunnable.rangeStartIndex = startIndex.toInt()
-            singleRunnable.rangeEndIndex = endIndex.toInt()
+            singleRunnable.rangeStartIndex = startIndex
+            singleRunnable.rangeEndIndex = endIndex
             singleRunnable.process = files[i].length()
-            singleRunnable.listener = object : SingleRunnable.OnListener {
+            singleRunnable.listener = object : BaseRunnable.OnListener {
 
-                override fun onProcess(singleRunnable: SingleRunnable, process: Long, total: Long, present: Float) {
+                override fun onProcess(singleRunnable: BaseRunnable, process: Long, total: Long, present: Float) {
                     //3 获取下载的进度
                     callbackProcess(singleRunnable, process, total, present)
                 }
 
-                override fun onComplete(singleRunnable: SingleRunnable, total: Long) {
+                override fun onComplete(singleRunnable: BaseRunnable, total: Long) {
                     //4 下载完成
                     callbackComplete(singleRunnable, total)
                 }
 
-                override fun onError(singleRunnable: SingleRunnable, type: DownErrorType, s: String) {
+                override fun onError(singleRunnable: BaseRunnable, type: DownErrorType, s: String) {
                     //下载失败
                     callbackError(singleRunnable, type, s)
                 }
 
-                private fun callbackProcess(singleRunnable: SingleRunnable, process: Long, total: Long, present: Float) {
-                    //Thread.sleep(500)
-                    this@MultiRunnable2.process += process
-                    listener?.onProcess(this@MultiRunnable2, process, this@MultiRunnable2.total, (process * 100 / total).toFloat())
+                private fun callbackProcess(singleRunnable: BaseRunnable, process: Long, total: Long, present: Float) {
+                    //Thread.sleep(1000)
+                    this@MultiRunnable2.process = 0
+                    for (downRunnable in downRunnables) {
+                        this@MultiRunnable2.process += downRunnable.process
+                    }
+                    //this@MultiRunnable2.process += process
+//                    listener?.onProcess(this@MultiRunnable2, process, this@MultiRunnable2.total, (process * 100 / total).toFloat())
+                    listener?.onProcess(this@MultiRunnable2, this@MultiRunnable2.process, this@MultiRunnable2.total, (this@MultiRunnable2.process * 100 / this@MultiRunnable2.total).toFloat())
                 }
 
-                private fun callbackComplete(singleRunnable: SingleRunnable, total: Long) {
+                private fun callbackComplete(singleRunnable: BaseRunnable, total: Long) {
                     subThreadCompleteCount++
                     if (subThreadCompleteCount == threadNum) {
                         runing(false)
@@ -116,15 +118,15 @@ class MultiRunnable2 : BaseRunnable() {
                         val inFile = File(path + File.separator + "$dir/${getFileName(url)}_Temp")
                         mergeFiles(outFile, inFile)
                         del(inFile)
-                        listener?.onComplete(this@MultiRunnable2, total)
+                        listener?.onComplete(this@MultiRunnable2, this@MultiRunnable2.total)
                     }
                 }
 
-                private fun callbackError(singleRunnable: SingleRunnable, type: DownErrorType, s: String) {
+                private fun callbackError(singleRunnable: BaseRunnable, type: DownErrorType, s: String) {
                     listener?.onError(this@MultiRunnable2, type, s)
                 }
             }
-            pool.submit(singleRunnable)
+            pool?.submit(singleRunnable)
             downRunnables.add(singleRunnable)
         }
     }
