@@ -14,7 +14,7 @@ import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 class DownManager {
-
+    var context: Context? = null
     private var downDao: DownDao? = null //数据库操作对象
     private var downConfig: DownConfig? = null //配置对象
     private var downDispatcher: DownDispatcher? = null //下载分发器
@@ -23,7 +23,8 @@ class DownManager {
 
     private constructor()
 
-    private constructor(downDao: DownDao?, downConfig: DownConfig, downDispatcher: DownDispatcher, downObserverable: DownObservable) {
+    private constructor(context: Context?, downDao: DownDao?, downConfig: DownConfig, downDispatcher: DownDispatcher, downObserverable: DownObservable) {
+        this.context = context
         this.downDao = downDao
         this.downConfig = downConfig
         this.downDispatcher = downDispatcher
@@ -32,7 +33,6 @@ class DownManager {
     }
 
     companion object {
-
         fun createDownManager(context: Context): DownManager {
             //初始化数据库
 //            val dao = DownDao(context, "XmDown", null, 100)
@@ -43,11 +43,11 @@ class DownManager {
             config.path = Environment.getExternalStorageDirectory().absolutePath
             config.dir = "XmDown"
             config.threadNum = 2
-            config.downTaskerPool = ThreadPoolExecutor(config.threadNum.toInt(), config.threadNum.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
-            config.isMultiRunnable = false
-            config.isSingleRunnable = true
+            config.downTaskerPool = ThreadPoolExecutor(config.threadNum.toInt(), config.threadNum.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //多任务下载线程池
+            config.isMultiRunnable = true
+            config.isSingleRunnable = false
             config.runqueues = 2
-            config.downDispatcherPool = ThreadPoolExecutor(config.runqueues.toInt(), config.runqueues.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000))
+            config.downDispatcherPool = ThreadPoolExecutor(config.runqueues.toInt(), config.runqueues.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //
 
             //初始化分发器
             val dispatcher = DownDispatcher()
@@ -60,7 +60,7 @@ class DownManager {
             val observerable = DownObservable()
 
             /*创建下载管理者*/
-            return DownManager(dao, config, dispatcher, observerable)
+            return DownManager(context, dao, config, dispatcher, observerable)
         }
     }
 
@@ -80,8 +80,17 @@ class DownManager {
         }
     }
 
-    fun pause(task: DownTask) {
-        /*暂停下载任务*/
+    fun deleteAllDownTasker() {
+        /*删除所有下载任务*/
+        if (downTaskers?.isNotEmpty()!!) {
+            for (tasker in downTaskers!!) {
+                tasker.delete()
+            }
+        }
+    }
+
+    fun pauseDownTasker(task: DownTask) {
+        /*暂停指定下载任务*/
         if (downTaskers?.isNotEmpty()!!) {
             val iterator = downTaskers?.iterator()
             while (iterator?.hasNext()!!) {
@@ -110,5 +119,7 @@ class DownManager {
         return downObserverable
     }
 
-
+    fun downTaskers(): ArrayList<DownTasker>? {
+        return downTaskers
+    }
 }

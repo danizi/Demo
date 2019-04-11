@@ -26,18 +26,15 @@ class MultiRunnable2 : BaseRunnable() {
     }
 
     var threadNum = 0   //限定线程数量
-    private var pool: ExecutorService? = null
+    var pool: ExecutorService? = null
     private var subThreadCompleteCount = 0 //下载线程完成集合数量
     private var downRunnables: ArrayList<SingleRunnable2> = ArrayList() //线程集合
 
     override fun down() {
         /*执行下载操作*/
-        if (pool == null) {
-            pool = ThreadPoolExecutor(threadNum, threadNum, 20, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //线程池
-        }
         //1 获取资源的大小
         val conn = iniConn()
-        total = conn.contentLength.toLong()
+        total = conn.contentLength.toLong() + process
 
         val lump = total / threadNum
         BKLog.d(TAG, "分成${threadNum}块 total:${total}B lump:${lump}B  块大小:${getSizeUnit(lump)} 总大小:${getSizeUnit(total)} ")
@@ -60,7 +57,7 @@ class MultiRunnable2 : BaseRunnable() {
         for (i in 0..(threadNum - 1)) {
             val file = files[i]
             val length = file.length()
-            val startIndex = if (length == (lump * (i + 1) - 1).toLong()) {
+            val startIndex = if (length == (lump * (i + 1) - 1)) {
                 BKLog.d(TAG, "${file.name} 块下载完成")
                 return
             } else {
@@ -73,12 +70,12 @@ class MultiRunnable2 : BaseRunnable() {
             }
 
             val singleRunnable = SingleRunnable2()
-            singleRunnable.url = url
             singleRunnable.threadName = "$name MultiRunnable_SingleRunnable_$i"
+            singleRunnable.url = url
+            singleRunnable.process = startIndex//files[i].length()
             singleRunnable.raf = rafs[i]
             singleRunnable.rangeStartIndex = startIndex
             singleRunnable.rangeEndIndex = endIndex
-            singleRunnable.process = files[i].length()
             singleRunnable.listener = object : BaseRunnable.OnListener {
 
                 override fun onProcess(singleRunnable: BaseRunnable, process: Long, total: Long, present: Float) {
@@ -102,8 +99,6 @@ class MultiRunnable2 : BaseRunnable() {
                     for (downRunnable in downRunnables) {
                         this@MultiRunnable2.process += downRunnable.process
                     }
-                    //this@MultiRunnable2.process += process
-//                    listener?.onProcess(this@MultiRunnable2, process, this@MultiRunnable2.total, (process * 100 / total).toFloat())
                     listener?.onProcess(this@MultiRunnable2, this@MultiRunnable2.process, this@MultiRunnable2.total, (this@MultiRunnable2.process * 100 / this@MultiRunnable2.total).toFloat())
                 }
 

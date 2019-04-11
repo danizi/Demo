@@ -20,4 +20,8 @@ class DownTask {
     var path = EMPTY_STRING
     var dir = EMPTY_STRING
     var absolutePath = EMPTY_STRING
+
+    //编辑相关字段
+//    var isEdit = false
+    var isSelect = false
 }

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context=".DownMainActivity">
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/rv"
@@ -35,25 +35,14 @@
         app:layout_constraintTop_toTopOf="@+id/btn_add" />
 
     <Button
-        android:id="@+id/btn_pause_all"
+        android:id="@+id/btn_delete"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginLeft="8dp"
-        android:text="暂停所有"
+        android:text="删除"
         app:layout_constraintBottom_toBottomOf="@+id/btn_edit"
         app:layout_constraintStart_toEndOf="@+id/btn_edit"
         app:layout_constraintTop_toTopOf="@+id/btn_edit" />
-
-    <Button
-        android:id="@+id/btn_delete_all"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginLeft="8dp"
-        android:text="删除所有"
-        app:layout_constraintBottom_toBottomOf="@+id/btn_pause_all"
-        app:layout_constraintStart_toEndOf="@+id/btn_pause_all"
-        app:layout_constraintTop_toTopOf="@+id/btn_pause_all" />
 
 </android.support.constraint.ConstraintLayout>

@@ -165,11 +165,14 @@ object FileUtil {
     fun del(f: File) {
         /*递归删除文件*/
         val b = f.listFiles()
-        for (i in (0 until b.size)) {
-            if (b[i].isFile) {
-                b[i].delete()
-            } else {
-                del(b[i])
+        if (b != null) {
+            for (i in (0 until b.size)) {
+                if (b[i].isFile) {
+                    b[i].delete()
+                    BKLog.d(TAG, "删除:${b[i].absoluteFile}")
+                } else {
+                    del(b[i])
+                }
             }
         }
         f.delete()

@@ -36,9 +36,7 @@ open class SingleRunnable2 : BaseRunnable() {
             }
             conn.setRequestProperty("Range", value)
             val inputStream = conn.inputStream
-            if (total < conn.contentLength.toLong()) {
-                total = conn.contentLength.toLong()
-            }
+            total = conn.contentLength.toLong() + rangeStartIndex
 
             if (total > getUsableSpace()) {
                 listener?.onError(this, DownErrorType.NO_SPACE, "空间不足，下载资源大小 ：${getSizeUnit(total)} 可用资源大小 ：${getSizeUnit(getUsableSpace())}")
@@ -48,7 +46,7 @@ open class SingleRunnable2 : BaseRunnable() {
 
             BKLog.d(TAG, "code:${conn.responseCode}")
             write(inputStream, raf)
-            callBackComplete()
+            callBackComplete()  //完成回调
         } catch (e: Exception) {
             e.printStackTrace()
             listener?.onError(this, DownErrorType.UNKNOWN, e.message!!)
@@ -74,6 +72,8 @@ open class SingleRunnable2 : BaseRunnable() {
                 callBackProcess(length.toLong()) //进度回调
                 raf?.write(buffer, 0, length)   //写入文件中
             }
+
+
         } catch (e: Exception) {
             e.printStackTrace()
             listener?.onError(this, DownErrorType.UNKNOWN, e.toString())
@@ -86,13 +86,16 @@ open class SingleRunnable2 : BaseRunnable() {
     private fun callBackProcess(length: Long) {
         /*进度回调给观察者*/
         this.process += length
-        present = (100 * this.process / total).toFloat()
+        val present = (100 * this.process / total).toFloat()
+//        if (this.present < present) { //ps:测试多个任务下载时，偶尔出现进度来回跳动问题，为了确保回传进度是正常的，特加此判断
+//            this.present = present
+//        }
         listener?.onProcess(this, process, total, present)
     }
 
     private fun callBackComplete() {
         /*完成回调给观察者*/
-        if (runing.get() /*&& process == total */) { //todo ps:暂停-重新下载process不对后续需要修改，但不影响使用。
+        if (runing.get() && process == total) { //ps:暂停-重新下载process不对后续需要修改，但不影响使用。
             listener?.onComplete(this, total)
             runing.set(false)
         }

@@ -5,7 +5,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import demo.xm.com.demo.R
 import demo.xm.com.demo.down3.DownManager
-import demo.xm.com.demo.down3.task.DownTask
+import demo.xm.com.demo.down3.task.DownTasker
 
 class DownAdapter(var downManager: DownManager?, var data: ArrayList<Any>? = ArrayList()) : RecyclerView.Adapter<DownViewHolder>() {
 
@@ -23,6 +23,6 @@ class DownAdapter(var downManager: DownManager?, var data: ArrayList<Any>? = Arr
     }
 
     override fun onBindViewHolder(p0: DownViewHolder, p1: Int) {
-        p0.bind(data?.get(p1) as DownTask, downManager)
+        p0.bind(data?.get(p1) as DownTasker, downManager)
     }
 }

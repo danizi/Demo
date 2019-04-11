@@ -3,12 +3,10 @@ package demo.xm.com.demo
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Environment
-import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.RecyclerView
 import android.util.Log
 import android.widget.Button
-import demo.xm.com.demo.R.id.rv
 import demo.xm.com.demo.down3.test.XmDownTest
 import java.io.File
 
@@ -16,6 +14,8 @@ class DownMainActivity : AppCompatActivity() {
 
     private var rv: RecyclerView? = null
     private var btnAdd: Button? = null
+    private var btnEdit: Button? = null
+    private var btnDelete: Button? = null
     private var xmDownTest: XmDownTest? = null
     private var count = 0
     private val downUrlArray = arrayOf(
@@ -43,6 +43,8 @@ class DownMainActivity : AppCompatActivity() {
     private fun findViews() {
         rv = findViewById(R.id.rv)
         btnAdd = findViewById(R.id.btn_add)
+        btnEdit = findViewById(R.id.btn_edit)
+        btnDelete = findViewById(R.id.btn_delete)
     }
 
     private fun iniData() {
@@ -73,6 +75,14 @@ class DownMainActivity : AppCompatActivity() {
                 xmDownTest?.add(downUrlArray[count])
                 count++
             }
+        }
+        btnEdit?.setOnClickListener {
+            xmDownTest?.editMode()
+        }
+
+
+        btnDelete?.setOnClickListener {
+            xmDownTest?.delete()
         }
     }
 

@@ -1,9 +1,14 @@
 package demo.xm.com.demo.down3.test
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
+import android.os.Handler
+import android.os.Message
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
+import android.util.Log
 import demo.xm.com.demo.down3.DownManager
 import demo.xm.com.demo.down3.config.DownConfig
 import demo.xm.com.demo.down3.enum_.DownErrorType
@@ -13,6 +18,7 @@ import demo.xm.com.demo.down3.task.DownTask
 import demo.xm.com.demo.down3.task.DownTasker
 import demo.xm.com.demo.down3.utils.CommonUtil
 import demo.xm.com.demo.down3.utils.CommonUtil.md5
+
 
 class XmDownTest(var context: Context) {
     companion object {
@@ -31,7 +37,24 @@ class XmDownTest(var context: Context) {
             }
 
             override fun onDelete(tasker: DownTasker) {
-                notifyUI(tasker, DownStateType.DELETE)
+                //notifyUI(tasker, DownStateType.DELETE)
+                notifyDelete(tasker)
+            }
+
+            private fun notifyDelete(tasker: DownTasker) {
+                val it = downAdapter?.data?.iterator() ?: return
+                var i = 0
+                while (it.hasNext()) {
+                    val taskerTemp = (it.next() as DownTasker)
+                    if (taskerTemp.task.uuid == tasker.task.uuid) {
+                        it.remove()
+                        (context as Activity).runOnUiThread {
+                            rv?.adapter?.notifyItemRangeChanged(i, 1)
+                        }
+                        break
+                    }
+                    i++
+                }
             }
 
             override fun onComplete(tasker: DownTasker, total: Long) {
@@ -47,7 +70,6 @@ class XmDownTest(var context: Context) {
             }
         })
         downAdapter = DownAdapter(downManager, ArrayList())
-
     }
 
     fun bindRv(rv: RecyclerView?) {
@@ -55,6 +77,15 @@ class XmDownTest(var context: Context) {
         rv?.itemAnimator = null
         rv?.adapter = downAdapter
         rv?.layoutManager = LinearLayoutManager(context)
+    }
+
+    private val handler = @SuppressLint("HandlerLeak")
+    object : Handler() {
+        override fun handleMessage(msg: Message?) {
+            super.handleMessage(msg)
+            val tasker = msg?.obj as DownTasker
+            notifyItem(tasker.task)
+        }
     }
 
     fun notifyUI(tasker: DownTasker, stateType: DownStateType, total: Long = 0, typeError: DownErrorType? = null, s: String = "", process: Long = 0L, present: Float = 0F) {
@@ -66,7 +97,10 @@ class XmDownTest(var context: Context) {
                 notifyItem(tasker.task)
             }
             DownStateType.RUNNING -> {
-                notifyItem(tasker.task)
+                val msg = handler.obtainMessage()
+                msg.what = 1
+                msg.obj = tasker
+                handler.sendMessageDelayed(msg, 10000)
             }
             DownStateType.PAUSE -> {
                 notifyItem(tasker.task)
@@ -81,9 +115,10 @@ class XmDownTest(var context: Context) {
 
     private fun notifyItem(task: DownTask) {
         for (i in 0..(downAdapter?.data?.size!! - 1)) {
-            val tempTask = (downAdapter?.data!![i] as DownTask)
-            if (tempTask.uuid == task.uuid) {
-                downAdapter?.data!![i] = task
+            val tempTask = (downAdapter?.data!![i] as DownTasker)
+            if (tempTask.task.uuid == task.uuid) {
+                val tasker = ((downAdapter?.data!![i]) as DownTasker)
+                tasker.task = task
                 //主线程上刷新
                 (context as Activity).runOnUiThread {
                     rv?.adapter?.notifyItemRangeChanged(i, 1)
@@ -97,29 +132,46 @@ class XmDownTest(var context: Context) {
     }
 
     fun add(url: String) {
-        val task = DownTask()
-        task.url = url
-        task.uuid = md5(url)
-        task.name = CommonUtil.getFileName(url).replace(".apk", "")
-        task.progress = 0
-        task.present = 0
-        addNotifyUI(task)
+        com.tbruyelle.rxpermissions.RxPermissions.getInstance(context)
+                .request(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                .subscribe { aBoolean ->
+                    if (aBoolean!!) {
+                        //当所有权限都允许之后，返回true
+                        val task = DownTask()
+                        task.url = url
+                        downAdapter?.data?.add(downManager?.createDownTasker(task)!!)
+                        rv?.adapter?.notifyDataSetChanged()
+                    } else {
+                        //只要有一个权限禁止，返回false，
+                        //下一次申请只申请没通过申请的权限
+                        Log.i("permissions", "btn_more_sametime：$aBoolean")
+                    }
+                }
     }
-
-    private fun addNotifyUI(task: DownTask) {
-        /*添加任务刷新UI*/
-        val positionStart = downAdapter?.data?.size!!
-        val itemCount = 1
-        downAdapter?.data?.add(task)
-        rv?.adapter?.notifyItemRangeChanged(positionStart, itemCount)
-    }
-
 
     fun initDisplay() {
         //首先从数据库中读取任务
         val tasks = downManager?.downDao()?.queryAll() ?: return
         for (task in tasks) {
-            addNotifyUI(task)
+            downAdapter?.data?.add(downManager?.createDownTasker(task)!!)
+        }
+        rv?.adapter?.notifyDataSetChanged()
+    }
+
+    fun editMode() {
+        /*编辑模式*/
+        DownViewHolder.isEdit = !DownViewHolder.isEdit
+        downAdapter?.notifyDataSetChanged()
+    }
+
+    fun delete() {
+        /*删除任务*/
+        for (tasker in downAdapter?.data!!) {
+            val downTasker = tasker as DownTasker
+            if (downTasker.task.isSelect) {
+                downTasker.delete()
+                break
+            }
         }
     }
 }
