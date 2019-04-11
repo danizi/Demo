@@ -100,7 +100,7 @@ class XmDownTest(var context: Context) {
                 val msg = handler.obtainMessage()
                 msg.what = 1
                 msg.obj = tasker
-                handler.sendMessageDelayed(msg, 10000)
+                handler.sendMessageDelayed(msg, 1000)
             }
             DownStateType.PAUSE -> {
                 notifyItem(tasker.task)

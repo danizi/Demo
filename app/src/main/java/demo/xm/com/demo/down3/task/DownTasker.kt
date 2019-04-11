@@ -11,9 +11,7 @@ import demo.xm.com.demo.down3.utils.BKLog
 import demo.xm.com.demo.down3.utils.CommonUtil.getFileName
 import demo.xm.com.demo.down3.utils.CommonUtil.md5
 import demo.xm.com.demo.down3.utils.FileUtil
-import demo.xm.com.demo.down3.utils.FileUtil.createNewFile
 import java.io.File
-import java.io.RandomAccessFile
 
 class DownTasker(private val downManager: DownManager, var task: DownTask) {
 
@@ -54,113 +52,41 @@ class DownTasker(private val downManager: DownManager, var task: DownTask) {
             task.dir = downManager.downConfig()?.dir!!
         }
 
-        if (TextUtils.isEmpty(task.absolutePath)) {
-            task.absolutePath = task.path + File.separator + task.dir + File.separator + task.fileName
-        }
+        if (TextUtils.isEmpty(task.absolutePath)) task.absolutePath = task.path + File.separator + task.dir + File.separator + task.fileName
     }
 
     private fun createRunnable(): BaseRunnable? {
         /*获取下载Runnable接口，接口分为单线程和多线程下载*/
         val listener = object : BaseRunnable.OnListener {
 
-            override fun onProcess(multiRunnable: BaseRunnable, process: Long, total: Long, present: Float) {
+            override fun onProcess(baseRunnable: BaseRunnable, process: Long, total: Long, present: Float) {
                 task.progress = process
                 task.total = total
                 task.present = present.toLong()
                 task.state = DownStateType.RUNNING.ordinal
                 downManager.downObserverable()?.notifyObserverProcess(this@DownTasker, process, total, present) //通知“观察者”下载进度
-                BKLog.i(MultiRunnable2.TAG, "taskName:${multiRunnable.name} process:$process present:${(process * 100 / total).toFloat()}")
+                BKLog.i(MultiRunnable2.TAG, "taskName:${baseRunnable.name} process:$process present:${(process * 100 / total).toFloat()}")
             }
 
-            override fun onComplete(multiRunnable: BaseRunnable, total: Long) {
+            override fun onComplete(baseRunnable: BaseRunnable, total: Long) {
                 task.total = total
                 task.state = DownStateType.COMPLETE.ordinal
                 downManager.downObserverable()?.notifyObserverComplete(this@DownTasker, total) //通知“观察者”下载完成
                 downManager.downDispatcher()?.finish(this@DownTasker) //通知“分发器”下载完成
-                BKLog.d(TAG, "taskName:${multiRunnable.name} onComplete total:$total")
+                BKLog.d(TAG, "taskName:${baseRunnable.name} onComplete total:$total")
             }
 
-            override fun onError(multiRunnable: BaseRunnable, type: DownErrorType, s: String) {
+            override fun onError(baseRunnable: BaseRunnable, type: DownErrorType, s: String) {
                 task.state = DownStateType.ERROR.ordinal
                 downManager.downObserverable()?.notifyObserverError(this@DownTasker, type, s)//通知观察者下载错误
                 downManager.downDispatcher()?.finish(this@DownTasker) //通知“分发器”下载错误
-                BKLog.e(TAG, "taskName:${multiRunnable.name} onError error:$s")
+                BKLog.e(TAG, "taskName:${baseRunnable.name} onError error:$s")
             }
         }
         return if (downManager.downConfig()?.isMultiRunnable == true) {
-            val multiRunnable = MultiRunnable2()
-
-//            multiRunnable.name = task.name
-//            multiRunnable.url = task.url
-//            multiRunnable.total = task.total
-//            multiRunnable.process = task.progress
-//            multiRunnable.present = task.present.toFloat()
-//
-//            multiRunnable.threadName = "MultiRunnable2"
-//            multiRunnable.threadNum = downManager.downConfig()?.threadNum?.toInt()!!
-//            multiRunnable.dir = downManager.downConfig()?.dir!!
-//            multiRunnable.path = downManager.downConfig()?.path!!
-//            multiRunnable.listener = listener
-
-            multiRunnable.name = task.name
-            multiRunnable.url = task.url
-            multiRunnable.total = task.total
-            multiRunnable.process = task.progress
-            multiRunnable.present = task.present.toFloat()
-            multiRunnable.pool = downManager.downConfig()?.downTaskerPool
-
-            multiRunnable.threadName = "MultiRunnable2"
-            multiRunnable.threadNum = downManager.downConfig()?.threadNum?.toInt()!!
-            multiRunnable.dir = task.dir
-            multiRunnable.path = task.path
-            multiRunnable.listener = listener
-
-            multiRunnable
+            MultiRunnable2.newMultiRunnable2(task, downManager, listener)
         } else {
-//            val path = downManager.downConfig()?.path
-//            val dir = downManager.downConfig()?.dir
-//            val fileName = CommonUtil.getFileName(task.url)
-//            val file = FileUtil.createNewFile(path, dir, fileName)
-//            val startIndex = file.length()
-//            val endIndex = -1
-//            val raf = RandomAccessFile(file, "rwd")
-//            raf.seek(startIndex)
-//            BKLog.d(TAG, "seek:$startIndex")
-
-//            val singleRunnable = SingleRunnable2()
-//            singleRunnable.name = task.name
-//            singleRunnable.url = task.url
-//            singleRunnable.total = task.total
-//            singleRunnable.process = startIndex
-//            singleRunnable.present = task.present.toFloat()
-//
-//            singleRunnable.threadName = "SingleRunnable"
-//            singleRunnable.raf = raf
-//            singleRunnable.name = task.name
-//            singleRunnable.rangeStartIndex = startIndex
-//            singleRunnable.rangeEndIndex = endIndex.toLong()
-//            singleRunnable.process = startIndex
-//            singleRunnable.listener = listener
-
-            val file = createNewFile(task.path, task.dir, task.fileName)
-            val startIndex = file.length()
-            val raf = RandomAccessFile(file, "rwd")
-            raf.seek(startIndex)
-            BKLog.d(TAG, "seek:$startIndex")
-
-            val singleRunnable = SingleRunnable2()
-            singleRunnable.name = task.name
-            singleRunnable.url = task.url
-            singleRunnable.total = task.total
-            singleRunnable.process = startIndex
-            singleRunnable.present = task.present.toFloat()
-
-            singleRunnable.threadName = "SingleRunnable2"
-            singleRunnable.raf = raf
-            singleRunnable.rangeStartIndex = startIndex
-            singleRunnable.rangeEndIndex = -1
-            singleRunnable.listener = listener
-            singleRunnable
+            SingleRunnable2.newSingleRunnable2(task, downManager, listener)
         }
     }
 

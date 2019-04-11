@@ -1,8 +1,11 @@
 package demo.xm.com.demo.down3.task.runnable
 
+import demo.xm.com.demo.down3.DownManager
 import demo.xm.com.demo.down3.config.DownConfig.Companion.DEFAULT
 import demo.xm.com.demo.down3.enum_.DownErrorType
+import demo.xm.com.demo.down3.task.DownTask
 import demo.xm.com.demo.down3.utils.BKLog
+import demo.xm.com.demo.down3.utils.FileUtil
 import demo.xm.com.demo.down3.utils.FileUtil.getSizeUnit
 import demo.xm.com.demo.down3.utils.FileUtil.getUsableSpace
 import java.io.BufferedInputStream
@@ -16,7 +19,28 @@ open class SingleRunnable2 : BaseRunnable() {
 
     companion object {
         const val TAG = "SingleRunnable"
-        const val DEFAULT_BUFFER_SIZE = 1024 * 4 //文件写入的缓存字节大小
+        var DEFAULT_BUFFER_SIZE = 0
+        fun newSingleRunnable2(task: DownTask?, downManager: DownManager?, listener: BaseRunnable.OnListener?): SingleRunnable2? {
+            val file = FileUtil.createNewFile(task?.path, task?.dir, task?.fileName)
+            val startIndex = file.length()
+            val raf = RandomAccessFile(file, "rwd")
+            raf.seek(startIndex)
+            BKLog.d(TAG, "seek:$startIndex")
+            DEFAULT_BUFFER_SIZE = downManager?.downConfig()?.bufferSize!!
+            val singleRunnable = SingleRunnable2()
+            singleRunnable.name = task?.name!!
+            singleRunnable.url = task.url
+            singleRunnable.total = task.total
+            singleRunnable.process = startIndex
+            singleRunnable.present = task.present.toFloat()
+
+            singleRunnable.threadName = "SingleRunnable2"
+            singleRunnable.raf = raf
+            singleRunnable.rangeStartIndex = startIndex
+            singleRunnable.rangeEndIndex = -1
+            singleRunnable.listener = listener
+            return singleRunnable
+        }
     }
 
     private var bufferSize = DEFAULT_BUFFER_SIZE
@@ -53,6 +77,7 @@ open class SingleRunnable2 : BaseRunnable() {
         }
     }
 
+    private var isComplete = false
     private fun write(inputStream: InputStream?, raf: RandomAccessFile?) {
         /*文件写入操作*/
         var length: Int
@@ -63,6 +88,7 @@ open class SingleRunnable2 : BaseRunnable() {
                 length = bis.read(buffer)
                 if (length == -1) {
                     BKLog.d(TAG, "读取完成。")
+                    isComplete = true
                     return
                 }
                 if (!runing.get()) {
@@ -95,7 +121,7 @@ open class SingleRunnable2 : BaseRunnable() {
 
     private fun callBackComplete() {
         /*完成回调给观察者*/
-        if (runing.get() && process == total) { //ps:暂停-重新下载process不对后续需要修改，但不影响使用。
+        if (runing.get() && isComplete /*process == total*/) { //ps:在使用MultiRunnable下载时process total是不对应的，所以在这里加了标志位。
             listener?.onComplete(this, total)
             runing.set(false)
         }

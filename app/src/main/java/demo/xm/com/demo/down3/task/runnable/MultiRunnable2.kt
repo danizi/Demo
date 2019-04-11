@@ -1,7 +1,9 @@
 package demo.xm.com.demo.down3.task.runnable
 
 import android.os.Environment
+import demo.xm.com.demo.down3.DownManager
 import demo.xm.com.demo.down3.enum_.DownErrorType
+import demo.xm.com.demo.down3.task.DownTask
 import demo.xm.com.demo.down3.utils.BKLog
 import demo.xm.com.demo.down3.utils.CommonUtil
 import demo.xm.com.demo.down3.utils.CommonUtil.getFileName
@@ -11,10 +13,7 @@ import demo.xm.com.demo.down3.utils.FileUtil.getSizeUnit
 import demo.xm.com.demo.down3.utils.FileUtil.mergeFiles
 import java.io.File
 import java.io.RandomAccessFile
-import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.ThreadPoolExecutor
-import java.util.concurrent.TimeUnit
 
 /**
  * 任务多个线程下载（分段）
@@ -23,7 +22,24 @@ class MultiRunnable2 : BaseRunnable() {
 
     companion object {
         const val TAG = "MultiRunnable2"
+        fun newMultiRunnable2(task: DownTask?, downManager: DownManager?, listener: BaseRunnable.OnListener?): MultiRunnable2 {
+            val multiRunnable = MultiRunnable2()
+            multiRunnable.name = task?.name!!
+            multiRunnable.url = task.url
+            multiRunnable.total = task.total
+            multiRunnable.process = task.progress
+            multiRunnable.present = task.present.toFloat()
+            multiRunnable.pool = downManager?.downConfig()?.downTaskerPool
+
+            multiRunnable.threadName = "MultiRunnable2"
+            multiRunnable.threadNum = downManager?.downConfig()?.threadNum?.toInt()!!
+            multiRunnable.dir = task.dir
+            multiRunnable.path = task.path
+            multiRunnable.listener = listener
+            return multiRunnable
+        }
     }
+
 
     var threadNum = 0   //限定线程数量
     var pool: ExecutorService? = null
@@ -34,7 +50,7 @@ class MultiRunnable2 : BaseRunnable() {
         /*执行下载操作*/
         //1 获取资源的大小
         val conn = iniConn()
-        total = conn.contentLength.toLong() + process
+        total = conn.contentLength.toLong()
 
         val lump = total / threadNum
         BKLog.d(TAG, "分成${threadNum}块 total:${total}B lump:${lump}B  块大小:${getSizeUnit(lump)} 总大小:${getSizeUnit(total)} ")
@@ -72,7 +88,7 @@ class MultiRunnable2 : BaseRunnable() {
             val singleRunnable = SingleRunnable2()
             singleRunnable.threadName = "$name MultiRunnable_SingleRunnable_$i"
             singleRunnable.url = url
-            singleRunnable.process = startIndex//files[i].length()
+            singleRunnable.process = files[i].length()
             singleRunnable.raf = rafs[i]
             singleRunnable.rangeStartIndex = startIndex
             singleRunnable.rangeEndIndex = endIndex

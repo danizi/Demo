@@ -35,19 +35,19 @@ class DownManager {
     companion object {
         fun createDownManager(context: Context): DownManager {
             //初始化数据库
-//            val dao = DownDao(context, "XmDown", null, 100)
-            val dao: DownDao? = null
-
+            val dao = DownDao(context, "XmDown", null, 100)
+//            val dao: DownDao? = null
             //初始化配置参数
             val config = DownConfig()
             config.path = Environment.getExternalStorageDirectory().absolutePath
             config.dir = "XmDown"
             config.threadNum = 2
             config.downTaskerPool = ThreadPoolExecutor(config.threadNum.toInt(), config.threadNum.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //多任务下载线程池
-            config.isMultiRunnable = true
-            config.isSingleRunnable = false
+            config.isMultiRunnable = false
+            config.isSingleRunnable = true
+            config.bufferSize =  1024 * 4
             config.runqueues = 2
-            config.downDispatcherPool = ThreadPoolExecutor(config.runqueues.toInt(), config.runqueues.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //
+            config.downDispatcherPool = ThreadPoolExecutor(config.runqueues.toInt(), config.runqueues.toInt(), 30, TimeUnit.SECONDS, ArrayBlockingQueue(2000)) //分发器线程池
 
             //初始化分发器
             val dispatcher = DownDispatcher()
