@@ -170,7 +170,6 @@ class XmDownTest(var context: Context) {
             val downTasker = tasker as DownTasker
             if (downTasker.task.isSelect) {
                 downTasker.delete()
-                break
             }
         }
     }
